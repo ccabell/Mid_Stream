@@ -9,9 +9,13 @@ import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
+import Divider from '@mui/material/Divider';
+import Alert from '@mui/material/Alert';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { runsApi } from '@/api';
-import type { Run, V2Pass1Output, V2Pass2Output } from '@/api';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { runsApi, agentsApi } from '@/api';
+import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult } from '@/api';
 import { ROUTES } from '@/constants/routes';
 
 export function RunDetailPage() {
@@ -20,15 +24,39 @@ export function RunDetailPage() {
   const [run, setRun] = useState<Run | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [runningAgent, setRunningAgent] = useState<string | null>(null);
+  const [agentError, setAgentError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!runId) return;
-    runsApi
-      .getById(runId)
-      .then(setRun)
+    Promise.all([
+      runsApi.getById(runId),
+      agentsApi.list(),
+    ])
+      .then(([runData, agentsData]) => {
+        setRun(runData);
+        setAgents(agentsData);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, [runId]);
+
+  const handleRunAgent = async (agentId: string) => {
+    if (!runId) return;
+    setRunningAgent(agentId);
+    setAgentError(null);
+    try {
+      await agentsApi.runDownstream(runId, agentId);
+      // Refresh run data to get new downstream results
+      const updatedRun = await runsApi.getById(runId);
+      setRun(updatedRun);
+    } catch (e) {
+      setAgentError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunningAgent(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -211,6 +239,92 @@ export function RunDetailPage() {
                 </Box>
               ))}
             </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Downstream Agents Section */}
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="overline" color="text.secondary">
+            Run Agents
+          </Typography>
+          {agentError && (
+            <Alert severity="error" sx={{ mt: 1, mb: 1 }}>
+              {agentError}
+            </Alert>
+          )}
+          <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {agents.map((agent) => {
+              const hasResult = run.outputs?.downstream?.[agent.id];
+              return (
+                <Button
+                  key={agent.id}
+                  variant={hasResult ? 'outlined' : 'contained'}
+                  size="small"
+                  disabled={runningAgent !== null}
+                  startIcon={
+                    runningAgent === agent.id ? (
+                      <CircularProgress size={16} />
+                    ) : hasResult ? (
+                      <CheckCircleIcon />
+                    ) : (
+                      <PlayArrowIcon />
+                    )
+                  }
+                  onClick={() => handleRunAgent(agent.id)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {agent.name}
+                </Button>
+              );
+            })}
+            {agents.length === 0 && (
+              <Typography variant="body2" color="text.secondary">
+                No agents available
+              </Typography>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Downstream Results */}
+      {run.outputs?.downstream && Object.keys(run.outputs.downstream).length > 0 && (
+        <Card sx={{ mb: 2 }}>
+          <CardContent>
+            <Typography variant="overline" color="text.secondary">
+              Agent Outputs
+            </Typography>
+            {Object.entries(run.outputs.downstream as Record<string, DownstreamResult>).map(
+              ([agentId, result]) => (
+                <Box key={agentId} sx={{ mt: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {agents.find((a) => a.id === agentId)?.name ?? agentId}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {result.ran_at ? new Date(result.ran_at).toLocaleString() : ''}
+                    </Typography>
+                  </Box>
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      backgroundColor: 'action.hover',
+                      borderRadius: 1,
+                      overflow: 'auto',
+                      fontSize: 12,
+                      maxHeight: 400,
+                    }}
+                  >
+                    {typeof result.result === 'string'
+                      ? result.result
+                      : JSON.stringify(result.result, null, 2)}
+                  </Box>
+                  <Divider sx={{ mt: 2 }} />
+                </Box>
+              )
+            )}
           </CardContent>
         </Card>
       )}

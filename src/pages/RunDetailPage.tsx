@@ -99,12 +99,12 @@ export function RunDetailPage() {
         >
           Runs
         </Link>
-        <Typography color="text.primary">Run {run.id.slice(0, 8)}</Typography>
+        <Typography color="text.primary">Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
       </Breadcrumbs>
 
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="h5">Run {run.id.slice(0, 8)}</Typography>
+        <Typography variant="h5">Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
         <Chip
           label={run.status || 'Unknown'}
           color={run.status === 'success' || run.status === 'completed' ? 'success' : 'default'}

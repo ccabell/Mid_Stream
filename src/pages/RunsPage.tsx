@@ -63,10 +63,10 @@ function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
               </Box>
               <Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                  Run {run.id.slice(0, 8)}
+                  Run {(run.run_id ?? run.id).slice(0, 8)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {run.id}
+                  {run.run_id ?? run.id}
                 </Typography>
               </Box>
             </Box>
@@ -170,8 +170,8 @@ export function RunsPage() {
       ) : (
         <Grid container spacing={2}>
           {runs.map((run) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={run.id}>
-              <RunCard run={run} onClick={() => navigate(runDetailPath(run.id))} />
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={run.run_id ?? run.id}>
+              <RunCard run={run} onClick={() => navigate(runDetailPath(run.run_id ?? run.id))} />
             </Grid>
           ))}
         </Grid>

@@ -8,6 +8,9 @@ export const client = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Alias for backward compatibility
+export const apiClient = client;
+
 client.interceptors.response.use(
   (res) => res,
   (err) => {

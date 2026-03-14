@@ -74,7 +74,7 @@ export const getApiPracticeId = (practiceId: string | null): string | null => {
 
 export interface PLService extends Timestamps {
   id: string;
-  practice_id: string;
+  practice_id: string | null; // null for global library items
   practice_name?: string;
   title: string;
   description: string | null;
@@ -126,7 +126,7 @@ export type UpdatePLServicePayload = Partial<CreatePLServicePayload>;
 
 export interface PLProduct extends Timestamps {
   id: string;
-  practice_id: string;
+  practice_id: string | null; // null for global library items
   practice_name?: string;
   title: string;
   description: string | null;

@@ -1,17 +1,26 @@
 /**
  * Practice Library Page
  *
- * Manage practice-specific services, products, packages, and concerns
+ * Manage practice-specific services, products, packages, and concerns.
+ * Also supports Global Library mode for managing shared items.
  */
 
-import { useEffect } from 'react';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
+import Alert from '@mui/material/Alert';
 import AddIcon from '@mui/icons-material/Add';
 import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import { useState } from 'react';
+import PublicIcon from '@mui/icons-material/Public';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   PracticeSelector,
@@ -20,12 +29,17 @@ import {
   ProductsList,
   PackagesList,
   ConcernsList,
+  ServiceFormModal,
+  ProductFormModal,
+  PackageFormModal,
+  ConcernFormModal,
 } from 'components/practiceLibrary';
 import {
   usePracticeLibraryStore,
   practiceLibrarySelectors,
   useLoadActiveTabData,
 } from 'stores/practiceLibraryStore';
+import { exportPracticeLibrary, type ExportOptions } from 'utils/practiceLibraryExport';
 
 function LibraryContent() {
   const activeTab = usePracticeLibraryStore(practiceLibrarySelectors.selectActiveTab);
@@ -47,18 +61,47 @@ function LibraryContent() {
 function SearchAndActions() {
   const activeTab = usePracticeLibraryStore(practiceLibrarySelectors.selectActiveTab);
   const filters = usePracticeLibraryStore(practiceLibrarySelectors.selectFilters);
+  const isGlobalMode = usePracticeLibraryStore(practiceLibrarySelectors.selectIsGlobalLibraryMode);
   const actions = usePracticeLibraryStore(practiceLibrarySelectors.selectActions);
+  const selectedPractice = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPractice);
+  const services = usePracticeLibraryStore(practiceLibrarySelectors.selectServices);
+  const products = usePracticeLibraryStore(practiceLibrarySelectors.selectProducts);
+  const packages = usePracticeLibraryStore(practiceLibrarySelectors.selectPackages);
+  const concerns = usePracticeLibraryStore(practiceLibrarySelectors.selectConcerns);
+
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
+  const exportMenuOpen = Boolean(exportMenuAnchor);
+
+  const handleExportClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setExportMenuAnchor(event.currentTarget);
+  };
+
+  const handleExportClose = () => {
+    setExportMenuAnchor(null);
+  };
+
+  const handleExport = (format: ExportOptions['format']) => {
+    if (!selectedPractice) return;
+
+    exportPracticeLibrary(selectedPractice, services, products, packages, concerns, {
+      format,
+      includeInactive: false,
+    });
+
+    handleExportClose();
+  };
 
   const getAddLabel = () => {
+    const prefix = isGlobalMode ? 'Add Global ' : 'Add ';
     switch (activeTab) {
       case 'services':
-        return 'Add Service';
+        return `${prefix}Service`;
       case 'products':
-        return 'Add Product';
+        return `${prefix}Product`;
       case 'packages':
-        return 'Create Package';
+        return isGlobalMode ? 'Create Global Package' : 'Create Package';
       case 'concerns':
-        return 'Add Concern';
+        return `${prefix}Concern`;
       default:
         return 'Add';
     }
@@ -81,13 +124,49 @@ function SearchAndActions() {
         sx={{ minWidth: 240 }}
       />
       <Box sx={{ flex: 1 }} />
+      {!isGlobalMode && (
+        <Button
+          variant="outlined"
+          startIcon={<UploadIcon />}
+          onClick={() => actions.openImportModal()}
+        >
+          Import from Global
+        </Button>
+      )}
       <Button
         variant="outlined"
-        startIcon={<UploadIcon />}
-        onClick={() => actions.openImportModal()}
+        startIcon={<DownloadIcon />}
+        onClick={handleExportClick}
+        disabled={!selectedPractice}
       >
-        Import
+        Export JSON
       </Button>
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={exportMenuOpen}
+        onClose={handleExportClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <MenuItem onClick={() => handleExport('a360')}>
+          <ListItemIcon>
+            <DownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="A360 Format"
+            secondary="Practice offerings for A360 integration"
+          />
+        </MenuItem>
+        <MenuItem onClick={() => handleExport('midstream')}>
+          <ListItemIcon>
+            <DownloadIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="Mid_Stream Format"
+            secondary="Full library export with all data"
+          />
+        </MenuItem>
+      </Menu>
       <Button
         variant="contained"
         startIcon={<AddIcon />}
@@ -102,6 +181,7 @@ function SearchAndActions() {
 export function PracticeLibraryPage() {
   const selectedPracticeId = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPracticeId);
   const selectedPractice = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPractice);
+  const isGlobalMode = usePracticeLibraryStore(practiceLibrarySelectors.selectIsGlobalLibraryMode);
 
   // Load data when practice or tab changes
   useLoadActiveTabData();
@@ -111,18 +191,45 @@ export function PracticeLibraryPage() {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Practice Library
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {isGlobalMode && <PublicIcon sx={{ color: 'primary.main' }} />}
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              {isGlobalMode ? 'Global Library' : 'Practice Library'}
+            </Typography>
+            {isGlobalMode && (
+              <Chip
+                label="SHARED"
+                size="small"
+                color="primary"
+                sx={{ fontWeight: 600, fontSize: 11 }}
+              />
+            )}
+          </Box>
           <Typography variant="body2" color="text.secondary">
-            Manage services, products, packages, and concerns for your practice
+            {isGlobalMode
+              ? 'Manage shared services, products, and packages available to all practices'
+              : 'Manage services, products, packages, and concerns for your practice'}
           </Typography>
         </Box>
         <PracticeSelector />
       </Box>
 
-      {/* Practice Info */}
-      {selectedPractice && (
+      {/* Global Library Info Banner */}
+      {isGlobalMode && (
+        <Alert
+          severity="info"
+          icon={<PublicIcon />}
+          sx={{ mb: 3 }}
+        >
+          <Typography variant="body2">
+            <strong>Global Library Mode:</strong> Items created here are shared templates that can be
+            imported into any practice library. Changes here affect the master catalog.
+          </Typography>
+        </Alert>
+      )}
+
+      {/* Practice Info (only shown for practice mode) */}
+      {selectedPractice && !isGlobalMode && (
         <Box
           sx={{
             display: 'flex',
@@ -174,10 +281,16 @@ export function PracticeLibraryPage() {
           }}
         >
           <Typography variant="h6" color="text.secondary">
-            Select a practice to manage its library
+            Select a library to manage
           </Typography>
         </Box>
       )}
+
+      {/* Form Modals */}
+      <ServiceFormModal />
+      <ProductFormModal />
+      <PackageFormModal />
+      <ConcernFormModal />
     </Box>
   );
 }

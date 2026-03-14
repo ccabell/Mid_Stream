@@ -7,8 +7,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
-import { agentsApi } from '@/api';
-import type { Agent } from '@/api';
+import { agentsApi } from 'apiServices';
+import type { Agent } from 'apiServices';
 
 export function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);

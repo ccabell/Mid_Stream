@@ -12,9 +12,9 @@ import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import { runsApi } from '@/api';
-import type { Run } from '@/api';
-import { runDetailPath } from '@/constants/routes';
+import { runsApi } from 'apiServices';
+import type { Run } from 'apiServices';
+import { runDetailPath } from 'constants/routes';
 import { format } from 'date-fns';
 
 function getStatusConfig(status: string | undefined) {

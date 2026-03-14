@@ -18,7 +18,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { useNavigate } from 'react-router-dom';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES } from 'constants/routes';
 
 interface FeatureCardProps {
   title: string;

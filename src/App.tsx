@@ -3,9 +3,9 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { theme } from '@/theme';
-import { AppLayout } from '@/components/layout';
-import { ROUTES } from '@/constants/routes';
+import { theme } from 'shared/styles';
+import { AppLayout } from 'components/layout';
+import { ROUTES } from 'constants/routes';
 import {
   HubPage,
   DashboardPage,
@@ -13,7 +13,7 @@ import {
   RunDetailPage,
   OpportunitiesPage,
   AgentsPage,
-} from '@/pages';
+} from 'pages';
 
 export default function App() {
   return (

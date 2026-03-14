@@ -14,9 +14,9 @@ import Alert from '@mui/material/Alert';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { runsApi, agentsApi } from '@/api';
-import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult } from '@/api';
-import { ROUTES } from '@/constants/routes';
+import { runsApi, agentsApi } from 'apiServices';
+import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult } from 'apiServices';
+import { ROUTES } from 'constants/routes';
 
 export function RunDetailPage() {
   const { runId } = useParams<{ runId: string }>();

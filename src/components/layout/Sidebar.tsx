@@ -16,7 +16,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { ROUTES } from '@/constants/routes';
+import { ROUTES } from 'constants/routes';
 
 const DRAWER_WIDTH = 240;
 const COLLAPSED_WIDTH = 72;

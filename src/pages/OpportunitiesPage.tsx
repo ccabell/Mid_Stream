@@ -12,9 +12,9 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
-import { opportunitiesApi } from '@/api';
-import type { Opportunity } from '@/api';
-import { runDetailPath } from '@/constants/routes';
+import { opportunitiesApi } from 'apiServices';
+import type { Opportunity } from 'apiServices';
+import { runDetailPath } from 'constants/routes';
 
 const STAGES: Opportunity['stage'][] = ['New', 'In progress', 'Won', 'Lost'];
 

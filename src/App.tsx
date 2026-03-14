@@ -16,6 +16,7 @@ import {
   AgentsPage,
   PracticeLibraryPage,
   PromptManagerPage,
+  TCPPage,
 } from 'pages';
 
 export default function App() {
@@ -35,6 +36,8 @@ export default function App() {
             <Route path={ROUTES.AGENTS} element={<AgentsPage />} />
             <Route path={ROUTES.PRACTICE_LIBRARY} element={<PracticeLibraryPage />} />
             <Route path={ROUTES.PROMPTS} element={<PromptManagerPage />} />
+            <Route path={ROUTES.TCP} element={<TCPPage />} />
+            <Route path={ROUTES.TCP_FROM_RUN} element={<TCPPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

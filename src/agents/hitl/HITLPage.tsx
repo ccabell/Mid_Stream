@@ -78,14 +78,16 @@ export function HITLPage({
   const handleNext = () => {
     const nextIndex = currentStepIndex + 1;
     if (nextIndex < STEPS.length) {
-      actions.goToStep(STEPS[nextIndex].key);
+      const nextStep = STEPS[nextIndex];
+      if (nextStep) actions.goToStep(nextStep.key);
     }
   };
 
   const handleBack = () => {
     const prevIndex = currentStepIndex - 1;
     if (prevIndex >= 0) {
-      actions.goToStep(STEPS[prevIndex].key);
+      const prevStep = STEPS[prevIndex];
+      if (prevStep) actions.goToStep(prevStep.key);
     }
   };
 

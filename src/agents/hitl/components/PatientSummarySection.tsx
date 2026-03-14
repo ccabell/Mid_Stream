@@ -57,13 +57,19 @@ export function PatientSummarySection({
     } else if (parts[0] === 'secondaryConcerns' && parts[1]) {
       const index = parseInt(parts[1], 10);
       const newConcerns = [...data.secondaryConcerns];
-      newConcerns[index] = { ...newConcerns[index], value: editValue, edited: true, verified: true };
-      onUpdateField('secondaryConcerns', newConcerns);
+      const current = newConcerns[index];
+      if (current) {
+        newConcerns[index] = { value: editValue, original: current.original, edited: true, verified: true };
+        onUpdateField('secondaryConcerns', newConcerns);
+      }
     } else if (parts[0] === 'goals' && parts[1]) {
       const index = parseInt(parts[1], 10);
       const newGoals = [...data.goals];
-      newGoals[index] = { ...newGoals[index], value: editValue, edited: true, verified: true };
-      onUpdateField('goals', newGoals);
+      const current = newGoals[index];
+      if (current) {
+        newGoals[index] = { value: editValue, original: current.original, edited: true, verified: true };
+        onUpdateField('goals', newGoals);
+      }
     }
 
     setEditingField(null);

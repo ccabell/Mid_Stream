@@ -285,19 +285,25 @@ export function useHITLState() {
         } else if (parts[0] === 'secondaryConcerns' && parts[1]) {
           const index = parseInt(parts[1], 10);
           const newConcerns = [...newDraft.patientSummary.secondaryConcerns];
-          newConcerns[index] = { ...newConcerns[index], verified: true };
-          newDraft.patientSummary = {
-            ...newDraft.patientSummary,
-            secondaryConcerns: newConcerns,
-          };
+          const current = newConcerns[index];
+          if (current) {
+            newConcerns[index] = { value: current.value, original: current.original, edited: current.edited, verified: true };
+            newDraft.patientSummary = {
+              ...newDraft.patientSummary,
+              secondaryConcerns: newConcerns,
+            };
+          }
         } else if (parts[0] === 'goals' && parts[1]) {
           const index = parseInt(parts[1], 10);
           const newGoals = [...newDraft.patientSummary.goals];
-          newGoals[index] = { ...newGoals[index], verified: true };
-          newDraft.patientSummary = {
-            ...newDraft.patientSummary,
-            goals: newGoals,
-          };
+          const current = newGoals[index];
+          if (current) {
+            newGoals[index] = { value: current.value, original: current.original, edited: current.edited, verified: true };
+            newDraft.patientSummary = {
+              ...newDraft.patientSummary,
+              goals: newGoals,
+            };
+          }
         }
       }
 
@@ -814,5 +820,5 @@ function generateSuggestedResponse(objection: ObjectionDraft | undefined): strin
     other: `I want to make sure we address any concerns you have. Can you tell me more about what's on your mind?`,
   };
 
-  return responses[objection.type] || responses.other;
+  return responses[objection.type] ?? responses.other ?? '';
 }

@@ -10,8 +10,11 @@ export const ROUTES = {
   AGENTS: '/agents',
   PRACTICE_LIBRARY: '/practice-library',
   PROMPTS: '/prompts',
+  TCP: '/tcp',
+  TCP_FROM_RUN: '/tcp/:runId',
 } as const;
 
 export const runDetailPath = (runId: string) => `/runs/${runId}`;
 export const runHitlPath = (runId: string) => `/runs/${runId}/hitl`;
 export const consultationDetailPath = (runId: string) => `/consultations/${runId}`;
+export const tcpPath = (runId?: string) => (runId ? `/tcp/${runId}` : '/tcp');

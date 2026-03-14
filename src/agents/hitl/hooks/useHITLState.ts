@@ -39,7 +39,7 @@ const INITIAL_STATE: HITLState = {
   versionInfo: null,
   editHistory: [],
   currentExpert: null,
-  clinicalReviewRequired: true,
+  clinicalReviewRequired: false, // Optional - can be enabled per practice
   clinicalReviewCompleted: false,
   clinicalReviewedBy: null,
   clinicalReviewedAt: null,

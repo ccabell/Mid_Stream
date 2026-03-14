@@ -11,8 +11,7 @@ import type { AgentModule, AgentCategory } from './types';
 // AGENT IMPORTS
 // ============================================================================
 
-// Import agents as they are created:
-// import { hitlAgent } from './hitl';
+import { hitlAgent } from './hitl';
 // import { tcpAgent } from './tcp';
 // import { practiceLibraryAgent } from './practice-library';
 
@@ -25,8 +24,7 @@ import type { AgentModule, AgentCategory } from './types';
  * Add new agents here after creating them.
  */
 export const agentRegistry: AgentModule[] = [
-  // Uncomment as agents are created:
-  // hitlAgent,
+  hitlAgent,
   // tcpAgent,
   // practiceLibraryAgent,
 ];

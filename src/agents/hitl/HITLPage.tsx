@@ -58,12 +58,18 @@ export function HITLPage({
   const { state, summary, actions } = useHITLState();
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
-  // Initialize from extraction output
+  // Initialize HITL state
+  // Prefer API-based initialization when runId is available (AI + practice library)
+  // Fall back to client-side extraction when runId is not available
   useEffect(() => {
-    if (extractionOutput && practiceId) {
-      actions.initFromExtraction(extractionOutput, practiceId);
+    if (runId && practiceId) {
+      // Use API-based analysis (recommended)
+      actions.initFromApi(runId, practiceId);
+    } else if (extractionOutput && practiceId) {
+      // Fallback to client-side transformation
+      actions.initFromExtraction(extractionOutput, practiceId, runId);
     }
-  }, [extractionOutput, practiceId, actions]);
+  }, [runId, extractionOutput, practiceId, actions]);
 
   const currentStepIndex = useMemo(() => {
     return STEPS.findIndex(s => s.key === state.currentStep);
@@ -100,19 +106,27 @@ export function HITLPage({
     setConfirmDialogOpen(true);
   };
 
-  const handleConfirmApprove = () => {
+  const handleConfirmApprove = async () => {
     setConfirmDialogOpen(false);
 
-    const output = actions.submit();
-    if (output && onComplete) {
-      const agentOutput: AgentOutput = {
-        agent_id: 'hitl_verification',
-        run_id: runId || '',
-        output,
-        status: 'completed',
-        created_at: new Date().toISOString(),
-      };
-      onComplete(agentOutput);
+    // Save to run via API
+    const result = await actions.saveToRun('current-user', 'hitl_verification');
+
+    if (result.success) {
+      const output = actions.submit();
+      if (output && onComplete) {
+        const agentOutput: AgentOutput = {
+          agent_id: 'hitl_verification',
+          run_id: runId || '',
+          output,
+          status: 'completed',
+          created_at: new Date().toISOString(),
+        };
+        onComplete(agentOutput);
+      }
+    } else {
+      // Show error - update state with error
+      console.error('Failed to save HITL:', result.error);
     }
   };
 

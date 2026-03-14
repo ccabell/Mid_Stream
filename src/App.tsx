@@ -14,6 +14,7 @@ import {
   OpportunitiesPage,
   AgentsPage,
   PracticeLibraryPage,
+  PromptManagerPage,
 } from 'pages';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path={ROUTES.OPPORTUNITIES} element={<OpportunitiesPage />} />
             <Route path={ROUTES.AGENTS} element={<AgentsPage />} />
             <Route path={ROUTES.PRACTICE_LIBRARY} element={<PracticeLibraryPage />} />
+            <Route path={ROUTES.PROMPTS} element={<PromptManagerPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

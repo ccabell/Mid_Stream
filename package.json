@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
+    "server": "npx ts-node --esm server/prompt-server.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -30,9 +32,13 @@
     "recharts": "^2.15.4",
     "uuid": "^13.0.0",
     "yup": "^1.7.1",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.11",
+    "express": "^4.21.0",
+    "cors": "^2.8.5"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@eslint/js": "^9.39.4",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
@@ -49,7 +55,9 @@
     "vite": "^6.4.1",
     "vite-plugin-checker": "^0.12.0",
     "vite-plugin-svgr": "^4.5.0",
-    "vite-tsconfig-paths": "^6.1.1"
+    "vite-tsconfig-paths": "^6.1.1",
+    "concurrently": "^9.0.1",
+    "ts-node": "^10.9.2"
   },
   "optionalDependencies": {
     "@rollup/rollup-win32-x64-msvc": "^4.59.0"

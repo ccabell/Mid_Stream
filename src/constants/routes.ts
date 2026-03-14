@@ -8,6 +8,7 @@ export const ROUTES = {
   OPPORTUNITIES: '/opportunities',
   AGENTS: '/agents',
   PRACTICE_LIBRARY: '/practice-library',
+  PROMPTS: '/prompts',
 } as const;
 
 export const runDetailPath = (runId: string) => `/runs/${runId}`;

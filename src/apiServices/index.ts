@@ -4,6 +4,7 @@ export { opportunitiesApi } from './opportunities.api';
 export { agentsApi } from './agents.api';
 export { transcriptsApi } from './transcripts.api';
 export { practicesApi } from './practices.api';
+export { promptsApi } from './prompts.api';
 export type * from './types';
 
 // Practice Library

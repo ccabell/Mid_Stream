@@ -2,9 +2,10 @@
  * HITL State Hook
  *
  * Manages the complete state for the HITL verification workflow.
+ * Now supports both client-side transformation and API-based analysis.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { ExtractionOutput, HITLVerifiedOutput, TCPSettings } from '../../types';
 import type {
@@ -20,6 +21,7 @@ import type {
   PatientSummaryDraft,
 } from '../types';
 import { transformExtractionToHITLDraft, convertDraftToOutput } from '../utils/transformExtraction';
+import { runsApi, type HITLAnalyzeResponse, type HITLVerificationDraft } from '../../../apiServices/runs.api';
 
 const INITIAL_STATE: HITLState = {
   currentStep: 'loading',
@@ -30,17 +32,185 @@ const INITIAL_STATE: HITLState = {
   validationErrors: [],
 };
 
+/**
+ * Transform API response draft to local draft format
+ */
+function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
+  return {
+    patientSummary: {
+      primaryConcern: {
+        value: apiDraft.patient_voice.primary_concern,
+        original: apiDraft.patient_voice.primary_concern,
+        verified: false,
+        edited: false,
+      },
+      secondaryConcerns: apiDraft.patient_voice.secondary_concerns.map(c => ({
+        value: c,
+        original: c,
+        verified: false,
+        edited: false,
+      })),
+      goals: apiDraft.patient_voice.goals.map(g => ({
+        value: g,
+        original: g,
+        verified: false,
+        edited: false,
+      })),
+      anticipatedOutcomes: apiDraft.patient_voice.expectations,
+      timeline: {
+        event: null,
+        timeframe: null,
+        urgency: 'medium' as const,
+      },
+    },
+    treatments: apiDraft.treatment_plan_today.map(t => ({
+      id: uuidv4(),
+      name: t.name,
+      area: t.area,
+      details: t.details,
+      cost: t.price_display || '',
+      status: 'performed' as const,
+      included: t.include,
+      source: 'extraction' as const,
+    })),
+    recommendations: apiDraft.additional_recommendations.map(r => ({
+      id: uuidv4(),
+      name: r.name,
+      type: r.type as 'service' | 'product' | 'package',
+      rationale: r.rationale,
+      priorityScore: r.priority_score,
+      tier: r.priority_score >= 80 ? 1 : r.priority_score >= 60 ? 2 : r.priority_score >= 40 ? 3 : 4,
+      patientReception: null,
+      action: r.action,
+      scores: {
+        patientBenefit: Math.round(r.priority_score * 0.4),
+        clinicalViability: Math.round(r.priority_score * 0.35),
+        practiceValue: Math.round(r.priority_score * 0.25),
+      },
+      talkingPoints: [],
+      synergies: [],
+    })),
+    needsAttention: {
+      objections: apiDraft.objections_hesitations_concerns
+        .filter(i => i.type === 'objection')
+        .map(o => ({
+          id: uuidv4(),
+          type: 'other' as const,
+          statement: o.statement,
+          resolved: o.status === 'resolved',
+          resolution_approach: null,
+          status: o.status,
+          suggestedResponse: o.suggested_response || null,
+          suggestedResponseLoading: false,
+          notes: '',
+        })),
+      hesitations: apiDraft.objections_hesitations_concerns
+        .filter(i => i.type === 'hesitation')
+        .map(h => ({
+          id: uuidv4(),
+          topic: 'Hesitation',
+          statement: h.statement,
+          resolved: h.status === 'resolved',
+          resolution_approach: null,
+          status: h.status,
+          notes: '',
+        })),
+      concerns: apiDraft.objections_hesitations_concerns
+        .filter(i => i.type === 'concern')
+        .map(c => ({
+          id: uuidv4(),
+          concern: c.statement,
+          raised_by: 'patient' as const,
+          category: 'other' as const,
+          addressed: c.status === 'resolved',
+          response: null,
+          status: c.status === 'resolved' ? 'addressed' as const : 'unaddressed' as const,
+          notes: '',
+        })),
+    },
+    checklist: {
+      items: apiDraft.visit_checklist.flatMap(category =>
+        category.items.map(item => ({
+          itemId: item.item_id,
+          itemLabel: item.item_label,
+          category: category.category as 'safety' | 'clinical' | 'education' | 'closing',
+          completed: item.completed,
+          critical: item.critical,
+          evidence: null,
+          manuallyChecked: false,
+        }))
+      ),
+      completionRate: 0,
+      criticalItemsComplete: true,
+    },
+    settings: {
+      language: 'English',
+      language_level: 'Standard',
+      perspective: 'Second Person',
+      include_pricing: true,
+      include_future: true,
+    },
+  };
+}
+
 export function useHITLState() {
   const [state, setState] = useState<HITLState>(INITIAL_STATE);
 
+  // Store run ID and practice ID for saving
+  const contextRef = useRef<{ runId?: string; practiceId?: string }>({});
+
   /**
-   * Initialize from extraction output
+   * Initialize from API analysis (recommended)
+   * Calls the HITL analyze endpoint which uses AI + practice library
+   */
+  const initFromApi = useCallback(async (
+    runId: string,
+    practiceId?: string
+  ) => {
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    contextRef.current = { runId, practiceId };
+
+    try {
+      const response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
+      const draft = transformApiDraftToLocal(response.draft);
+
+      // Recalculate checklist stats
+      const completedCount = draft.checklist.items.filter(i => i.completed === true).length;
+      draft.checklist.completionRate = draft.checklist.items.length > 0
+        ? completedCount / draft.checklist.items.length
+        : 1;
+      draft.checklist.criticalItemsComplete = draft.checklist.items
+        .filter(i => i.critical)
+        .every(i => i.completed === true);
+
+      setState({
+        currentStep: 'patient_summary',
+        loading: false,
+        error: null,
+        draft,
+        isDirty: false,
+        validationErrors: [],
+      });
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to analyze extraction',
+      }));
+    }
+  }, []);
+
+  /**
+   * Initialize from extraction output (client-side fallback)
+   * Use this when API is unavailable or for testing
    */
   const initFromExtraction = useCallback((
     extraction: ExtractionOutput,
-    _practiceId: string
+    practiceId: string,
+    runId?: string
   ) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
+    contextRef.current = { runId, practiceId };
 
     try {
       const draft = transformExtractionToHITLDraft(extraction);
@@ -492,7 +662,7 @@ export function useHITLState() {
   }, [state.draft]);
 
   /**
-   * Submit and generate output
+   * Submit and generate output (local only)
    */
   const submit = useCallback((): HITLVerifiedOutput | null => {
     const errors = validate();
@@ -505,6 +675,45 @@ export function useHITLState() {
     // Convert draft to output format
     return convertDraftToOutput(state.draft, 'current-user');
   }, [state.draft, validate]);
+
+  /**
+   * Save HITL verification to the run via API
+   * This persists the verified output back to the run record
+   */
+  const saveToRun = useCallback(async (
+    verifiedBy: string,
+    promptName: string = 'hitl_verification'
+  ): Promise<{ success: boolean; error?: string }> => {
+    const output = submit();
+    if (!output) {
+      return { success: false, error: 'Validation failed - cannot save' };
+    }
+
+    const { runId, practiceId } = contextRef.current;
+    if (!runId) {
+      return { success: false, error: 'No run ID available' };
+    }
+
+    try {
+      await runsApi.saveHITL(runId, {
+        prompt_name: promptName,
+        practice_id: practiceId,
+        verified_by: verifiedBy,
+        verified_output: output,
+      });
+
+      setState(prev => ({
+        ...prev,
+        currentStep: 'complete',
+        isDirty: false,
+      }));
+
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save HITL output';
+      return { success: false, error: message };
+    }
+  }, [submit]);
 
   /**
    * Reset state
@@ -549,22 +758,33 @@ export function useHITLState() {
     progress,
     summary,
     actions: {
+      // Initialization
+      initFromApi,
       initFromExtraction,
+      // Patient summary
       updatePatientSummary,
       verifyField,
       verifyAllInSection,
+      // Treatments
       updateTreatment,
       addTreatment,
       removeTreatment,
+      // Recommendations
       setRecommendationAction,
+      // Needs attention
       updateObjectionStatus,
       requestSuggestedResponse,
       updateHesitationStatus,
       updateConcernStatus,
+      // Checklist
       toggleChecklistItem,
+      // Settings
       updateSettings,
+      // Validation & submission
       validate,
       submit,
+      saveToRun,
+      // Navigation
       reset,
       goToStep,
     },

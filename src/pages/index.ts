@@ -5,3 +5,4 @@ export { RunDetailPage } from './RunDetailPage';
 export { OpportunitiesPage } from './OpportunitiesPage';
 export { AgentsPage } from './AgentsPage';
 export { PracticeLibraryPage } from './PracticeLibraryPage';
+export { PromptManagerPage } from './PromptManager';

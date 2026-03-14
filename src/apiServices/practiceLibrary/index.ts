@@ -18,3 +18,6 @@ export * from './packages.api';
 
 // Concerns API
 export * from './concerns.api';
+
+// Files API (database-backed practice library files)
+export * from './files.api';

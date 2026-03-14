@@ -73,3 +73,59 @@ export const exportPLServices = async (practiceId: string): Promise<PLService[]>
   });
   return response.data;
 };
+
+// ============================================
+// Global Library Services
+// ============================================
+
+const GLOBAL_URL = '/global/services';
+
+/**
+ * Get all global library services (practice_id = null)
+ */
+export const getGLServices = async (
+  params?: Omit<PLServiceSearchParams, 'practice_id'>,
+  signal?: AbortSignal
+): Promise<ListOfItems<PLService>> => {
+  const response = await apiClient.get<ListOfItems<PLService>>(GLOBAL_URL, { params, signal });
+  return response.data;
+};
+
+/**
+ * Get a single global library service
+ */
+export const getGLService = async (serviceId: string): Promise<PLService> => {
+  const response = await apiClient.get<PLService>(`${GLOBAL_URL}/${serviceId}`);
+  return response.data;
+};
+
+/**
+ * Create a global library service (practice_id = null)
+ */
+export const createGLService = async (
+  payload: Omit<CreatePLServicePayload, 'practice_id'>
+): Promise<PLService> => {
+  const response = await apiClient.post<PLService>(GLOBAL_URL, {
+    ...payload,
+    practice_id: null,
+  });
+  return response.data;
+};
+
+/**
+ * Update a global library service
+ */
+export const updateGLService = async (
+  serviceId: string,
+  payload: UpdatePLServicePayload
+): Promise<PLService> => {
+  const response = await apiClient.patch<PLService>(`${GLOBAL_URL}/${serviceId}`, payload);
+  return response.data;
+};
+
+/**
+ * Delete a global library service
+ */
+export const deleteGLService = async (serviceId: string): Promise<void> => {
+  await apiClient.delete(`${GLOBAL_URL}/${serviceId}`);
+};

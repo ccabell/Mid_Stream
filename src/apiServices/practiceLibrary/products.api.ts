@@ -66,3 +66,59 @@ export const importPLProducts = async (
   });
   return response.data;
 };
+
+// ============================================
+// Global Library Products
+// ============================================
+
+const GLOBAL_URL = '/global/products';
+
+/**
+ * Get all global library products (practice_id = null)
+ */
+export const getGLProducts = async (
+  params?: Omit<PLProductSearchParams, 'practice_id'>,
+  signal?: AbortSignal
+): Promise<ListOfItems<PLProduct>> => {
+  const response = await apiClient.get<ListOfItems<PLProduct>>(GLOBAL_URL, { params, signal });
+  return response.data;
+};
+
+/**
+ * Get a single global library product
+ */
+export const getGLProduct = async (productId: string): Promise<PLProduct> => {
+  const response = await apiClient.get<PLProduct>(`${GLOBAL_URL}/${productId}`);
+  return response.data;
+};
+
+/**
+ * Create a global library product (practice_id = null)
+ */
+export const createGLProduct = async (
+  payload: Omit<CreatePLProductPayload, 'practice_id'>
+): Promise<PLProduct> => {
+  const response = await apiClient.post<PLProduct>(GLOBAL_URL, {
+    ...payload,
+    practice_id: null,
+  });
+  return response.data;
+};
+
+/**
+ * Update a global library product
+ */
+export const updateGLProduct = async (
+  productId: string,
+  payload: UpdatePLProductPayload
+): Promise<PLProduct> => {
+  const response = await apiClient.patch<PLProduct>(`${GLOBAL_URL}/${productId}`, payload);
+  return response.data;
+};
+
+/**
+ * Delete a global library product
+ */
+export const deleteGLProduct = async (productId: string): Promise<void> => {
+  await apiClient.delete(`${GLOBAL_URL}/${productId}`);
+};

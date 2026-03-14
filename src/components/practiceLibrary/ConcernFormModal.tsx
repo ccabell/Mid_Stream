@@ -25,7 +25,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PublicIcon from '@mui/icons-material/Public';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
-import { getApiPracticeId, type PLConcern, type ConcernCategory, type CreatePLConcernPayload } from 'apiServices/practiceLibrary/types';
+import { isGlobalLibrary, type PLConcern, type ConcernCategory, type CreatePLConcernPayload } from 'apiServices/practiceLibrary/types';
 
 // Concern categories with display labels
 const CONCERN_CATEGORIES: { value: ConcernCategory; label: string }[] = [
@@ -135,10 +135,13 @@ export function ConcernFormModal() {
   const onSubmit = async (data: ConcernFormData) => {
     if (!selectedPracticeId) return;
 
-    const apiPracticeId = getApiPracticeId(selectedPracticeId);
+    const isGlobal = isGlobalLibrary(selectedPracticeId);
+    // For global library, use empty string (API will treat as null)
+    // For practice library, use actual practice_id
+    const practiceIdValue = isGlobal ? '' : selectedPracticeId;
 
     const payload: CreatePLConcernPayload = {
-      practice_id: apiPracticeId ?? '',
+      practice_id: practiceIdValue,
       concern_id: data.concern_id,
       label: data.label,
       category: data.category,
@@ -157,7 +160,7 @@ export function ConcernFormModal() {
 
       // Reload concerns
       const updatedConcerns = await practiceLibraryApi.getPLConcerns({
-        practice_id: apiPracticeId ?? undefined,
+        practice_id: isGlobal ? undefined : selectedPracticeId,
       });
       actions.setConcerns(updatedConcerns);
 

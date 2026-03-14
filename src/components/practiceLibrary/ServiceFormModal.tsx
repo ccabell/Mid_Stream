@@ -28,7 +28,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PublicIcon from '@mui/icons-material/Public';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
-import { getApiPracticeId, type PLService, type PriceTier, type CreatePLServicePayload } from 'apiServices/practiceLibrary/types';
+import { isGlobalLibrary, type PLService, type PriceTier, type CreatePLServicePayload } from 'apiServices/practiceLibrary/types';
 
 // Service categories
 const SERVICE_CATEGORIES = [
@@ -138,11 +138,10 @@ export function ServiceFormModal() {
   const onSubmit = async (data: ServiceFormData) => {
     if (!selectedPracticeId) return;
 
-    const apiPracticeId = getApiPracticeId(selectedPracticeId);
+    const isGlobal = isGlobalLibrary(selectedPracticeId);
 
-    const payload: CreatePLServicePayload = {
+    const basePayload = {
       title: data.title,
-      practice_id: apiPracticeId ?? '', // API will handle null for global
       description: data.description || null,
       category: data.category || null,
       subcategory: data.subcategory || null,
@@ -158,17 +157,33 @@ export function ServiceFormModal() {
     };
 
     try {
-      if (isEditMode && selectedService) {
-        await practiceLibraryApi.updatePLService(selectedService.id, payload);
+      if (isGlobal) {
+        // Global library CRUD
+        if (isEditMode && selectedService) {
+          await practiceLibraryApi.updateGLService(selectedService.id, basePayload);
+        } else {
+          await practiceLibraryApi.createGLService(basePayload);
+        }
+        // Reload global services
+        const updatedServices = await practiceLibraryApi.getGLServices();
+        actions.setServices(updatedServices);
       } else {
-        await practiceLibraryApi.createPLService(payload);
+        // Practice library CRUD
+        const payload: CreatePLServicePayload = {
+          ...basePayload,
+          practice_id: selectedPracticeId!,
+        };
+        if (isEditMode && selectedService) {
+          await practiceLibraryApi.updatePLService(selectedService.id, payload);
+        } else {
+          await practiceLibraryApi.createPLService(payload);
+        }
+        // Reload practice services
+        const updatedServices = await practiceLibraryApi.getPLServices({
+          practice_id: selectedPracticeId!,
+        });
+        actions.setServices(updatedServices);
       }
-
-      // Reload services
-      const updatedServices = await practiceLibraryApi.getPLServices({
-        practice_id: apiPracticeId ?? undefined,
-      });
-      actions.setServices(updatedServices);
 
       handleClose();
     } catch (error) {

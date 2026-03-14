@@ -8,7 +8,7 @@ import { useCallback, useEffect } from 'react';
 import { usePracticeLibraryStore } from './store';
 import * as selectors from './selectors';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
-import { getApiPracticeId, GLOBAL_LIBRARY_ID } from 'apiServices/practiceLibrary/types';
+import { isGlobalLibrary } from 'apiServices/practiceLibrary/types';
 import type { LibraryTab } from './types';
 
 /**
@@ -86,19 +86,21 @@ export const useServices = () => {
 
       setIsLoadingServices(true);
       try {
-        // Convert practiceId for API (global library uses null)
-        const apiPracticeId = getApiPracticeId(practiceId);
+        const filterParams = {
+          search: filters.search || undefined,
+          is_active: filters.is_active ?? undefined,
+          is_preferred: filters.is_preferred ?? undefined,
+          category: filters.category ?? undefined,
+        };
 
-        const data = await practiceLibraryApi.getPLServices(
-          {
-            practice_id: apiPracticeId ?? undefined,
-            search: filters.search || undefined,
-            is_active: filters.is_active ?? undefined,
-            is_preferred: filters.is_preferred ?? undefined,
-            category: filters.category ?? undefined,
-          },
-          signal
-        );
+        // Use global API for global library, practice API otherwise
+        const data = isGlobalLibrary(practiceId)
+          ? await practiceLibraryApi.getGLServices(filterParams, signal)
+          : await practiceLibraryApi.getPLServices(
+              { ...filterParams, practice_id: practiceId },
+              signal
+            );
+
         setServices(data);
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -130,18 +132,21 @@ export const useProducts = () => {
 
       setIsLoadingProducts(true);
       try {
-        const apiPracticeId = getApiPracticeId(practiceId);
+        const filterParams = {
+          search: filters.search || undefined,
+          is_active: filters.is_active ?? undefined,
+          is_preferred: filters.is_preferred ?? undefined,
+          category: filters.category ?? undefined,
+        };
 
-        const data = await practiceLibraryApi.getPLProducts(
-          {
-            practice_id: apiPracticeId ?? undefined,
-            search: filters.search || undefined,
-            is_active: filters.is_active ?? undefined,
-            is_preferred: filters.is_preferred ?? undefined,
-            category: filters.category ?? undefined,
-          },
-          signal
-        );
+        // Use global API for global library, practice API otherwise
+        const data = isGlobalLibrary(practiceId)
+          ? await practiceLibraryApi.getGLProducts(filterParams, signal)
+          : await practiceLibraryApi.getPLProducts(
+              { ...filterParams, practice_id: practiceId },
+              signal
+            );
+
         setProducts(data);
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -172,10 +177,12 @@ export const usePackages = () => {
 
       setIsLoadingPackages(true);
       try {
-        const apiPracticeId = getApiPracticeId(practiceId);
+        // For global library, pass practice_id as undefined to get global packages
+        // For practice library, pass the actual practice_id
+        const apiPracticeId = isGlobalLibrary(practiceId) ? undefined : practiceId;
 
         const data = await practiceLibraryApi.getPLPackages(
-          { practice_id: apiPracticeId ?? undefined },
+          { practice_id: apiPracticeId },
           signal
         );
         setPackages(data);
@@ -208,10 +215,12 @@ export const useConcerns = () => {
 
       setIsLoadingConcerns(true);
       try {
-        const apiPracticeId = getApiPracticeId(practiceId);
+        // For global library, pass practice_id as undefined to get global concerns
+        // For practice library, pass the actual practice_id
+        const apiPracticeId = isGlobalLibrary(practiceId) ? undefined : practiceId;
 
         const data = await practiceLibraryApi.getPLConcerns(
-          { practice_id: apiPracticeId ?? undefined },
+          { practice_id: apiPracticeId },
           signal
         );
         setConcerns(data);

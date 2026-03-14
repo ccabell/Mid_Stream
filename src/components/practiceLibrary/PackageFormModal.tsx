@@ -31,7 +31,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PublicIcon from '@mui/icons-material/Public';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
-import { getApiPracticeId, type PLPackage, type PLPackageItem, type CreatePLPackagePayload } from 'apiServices/practiceLibrary/types';
+import { isGlobalLibrary, type PLPackage, type PLPackageItem, type CreatePLPackagePayload } from 'apiServices/practiceLibrary/types';
 
 interface PackageItemFormData {
   item_type: 'service' | 'product';
@@ -138,10 +138,13 @@ export function PackageFormModal() {
   const onSubmit = async (data: PackageFormData) => {
     if (!selectedPracticeId) return;
 
-    const apiPracticeId = getApiPracticeId(selectedPracticeId);
+    const isGlobal = isGlobalLibrary(selectedPracticeId);
+    // For global library, use empty string (API will treat as null)
+    // For practice library, use actual practice_id
+    const practiceIdValue = isGlobal ? '' : selectedPracticeId;
 
     const payload: CreatePLPackagePayload = {
-      practice_id: apiPracticeId ?? '',
+      practice_id: practiceIdValue,
       name: data.name,
       description: data.description || null,
       package_price: parseFloat(data.package_price),
@@ -166,7 +169,7 @@ export function PackageFormModal() {
 
       // Reload packages
       const updatedPackages = await practiceLibraryApi.getPLPackages({
-        practice_id: apiPracticeId ?? undefined,
+        practice_id: isGlobal ? undefined : selectedPracticeId,
       });
       actions.setPackages(updatedPackages);
 

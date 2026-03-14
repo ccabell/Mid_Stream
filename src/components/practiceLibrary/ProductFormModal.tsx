@@ -27,7 +27,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PublicIcon from '@mui/icons-material/Public';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
-import { getApiPracticeId, type PLProduct, type CreatePLProductPayload } from 'apiServices/practiceLibrary/types';
+import { isGlobalLibrary, type PLProduct, type CreatePLProductPayload } from 'apiServices/practiceLibrary/types';
 
 // Product categories
 const PRODUCT_CATEGORIES = [
@@ -121,11 +121,10 @@ export function ProductFormModal() {
   const onSubmit = async (data: ProductFormData) => {
     if (!selectedPracticeId) return;
 
-    const apiPracticeId = getApiPracticeId(selectedPracticeId);
+    const isGlobal = isGlobalLibrary(selectedPracticeId);
 
-    const payload: CreatePLProductPayload = {
+    const basePayload = {
       title: data.title,
-      practice_id: apiPracticeId ?? '',
       description: data.description || null,
       category: data.category || null,
       price: data.price ? parseFloat(data.price) : null,
@@ -136,17 +135,33 @@ export function ProductFormModal() {
     };
 
     try {
-      if (isEditMode && selectedProduct) {
-        await practiceLibraryApi.updatePLProduct(selectedProduct.id, payload);
+      if (isGlobal) {
+        // Global library CRUD
+        if (isEditMode && selectedProduct) {
+          await practiceLibraryApi.updateGLProduct(selectedProduct.id, basePayload);
+        } else {
+          await practiceLibraryApi.createGLProduct(basePayload);
+        }
+        // Reload global products
+        const updatedProducts = await practiceLibraryApi.getGLProducts();
+        actions.setProducts(updatedProducts);
       } else {
-        await practiceLibraryApi.createPLProduct(payload);
+        // Practice library CRUD
+        const payload: CreatePLProductPayload = {
+          ...basePayload,
+          practice_id: selectedPracticeId!,
+        };
+        if (isEditMode && selectedProduct) {
+          await practiceLibraryApi.updatePLProduct(selectedProduct.id, payload);
+        } else {
+          await practiceLibraryApi.createPLProduct(payload);
+        }
+        // Reload practice products
+        const updatedProducts = await practiceLibraryApi.getPLProducts({
+          practice_id: selectedPracticeId!,
+        });
+        actions.setProducts(updatedProducts);
       }
-
-      // Reload products
-      const updatedProducts = await practiceLibraryApi.getPLProducts({
-        practice_id: apiPracticeId ?? undefined,
-      });
-      actions.setProducts(updatedProducts);
 
       handleClose();
     } catch (error) {

@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://prompt-runner-production.up.railway.app/:path*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }

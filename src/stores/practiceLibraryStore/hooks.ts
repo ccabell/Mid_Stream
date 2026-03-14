@@ -303,6 +303,16 @@ export const useModals = () => {
 };
 
 /**
+ * Hook for library mode
+ */
+export const useLibraryMode = () => {
+  const libraryMode = usePracticeLibraryStore(selectors.selectLibraryMode);
+  const isGlobalLibraryMode = usePracticeLibraryStore(selectors.selectIsGlobalLibraryMode);
+  const { setLibraryMode } = usePracticeLibraryActions();
+  return { libraryMode, isGlobalLibraryMode, setLibraryMode };
+};
+
+/**
  * Hook for selected items
  */
 export const useSelectedItems = () => {

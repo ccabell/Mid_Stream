@@ -354,6 +354,65 @@ export interface AgentOutput {
 }
 
 // ============================================================================
+// RUN WITH HITL OUTPUT
+// ============================================================================
+
+/**
+ * HITL output stored on a run (prompt_hitl field)
+ */
+export interface RunHITLOutput {
+  /** Name of the HITL prompt used */
+  prompt_name: string;
+
+  /** Practice this was verified for */
+  practice_id?: string;
+
+  /** The verified output (HITLVerifiedOutput) */
+  parsed_json: HITLVerifiedOutput;
+
+  /** When verification was completed */
+  verified_at: string;
+
+  /** Who performed the verification */
+  verified_by: string;
+}
+
+/**
+ * A run record from ie_runs table
+ */
+export interface Run {
+  id: string;
+  run_id: string;
+  transcript_id?: string;
+  practice_id?: string;
+  catalog_id?: string;
+  prompt_set_id?: string;
+  status: 'running' | 'success' | 'partial' | 'error';
+
+  /** Extraction outputs (prompt_1, prompt_2, etc.) */
+  outputs: {
+    prompt_1?: {
+      parsed_json: Pass1Output;
+      raw_text?: string;
+    };
+    prompt_2?: {
+      parsed_json: Pass2Output;
+      raw_text?: string;
+    };
+    value_metrics?: {
+      total_value: number;
+      by_disposition: Record<string, number>;
+    };
+  };
+
+  /** HITL verified output (added after HITL verification) */
+  prompt_hitl?: RunHITLOutput;
+
+  created_at: string;
+  updated_at?: string;
+}
+
+// ============================================================================
 // PRACTICE LIBRARY TYPES
 // ============================================================================
 

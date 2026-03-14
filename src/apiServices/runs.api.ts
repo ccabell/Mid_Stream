@@ -26,8 +26,11 @@ export interface HITLAnalyzeRequest {
 export interface HITLAnalyzeResponse {
   run_id: string;
   practice_id?: string;
+  success?: boolean;
+  parse_error?: string;
   verification_questions: HITLVerificationQuestion[];
   draft: HITLVerificationDraft;
+  library_files_loaded?: number;
 }
 
 export interface HITLVerificationQuestion {

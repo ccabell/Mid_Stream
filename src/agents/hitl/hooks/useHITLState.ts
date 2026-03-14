@@ -172,6 +172,13 @@ export function useHITLState() {
 
     try {
       const response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
+
+      // Check if the API returned a success flag
+      if ('success' in response && !response.success) {
+        const errorMsg = (response as { parse_error?: string }).parse_error || 'Analysis failed';
+        throw new Error(errorMsg);
+      }
+
       const draft = transformApiDraftToLocal(response.draft);
 
       // Recalculate checklist stats

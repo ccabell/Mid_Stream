@@ -180,8 +180,11 @@ export interface ChecklistItemDraft {
 // ============================================================================
 
 export interface HITLActions {
-  /** Initialize HITL from extraction output */
-  initFromExtraction: (extraction: ExtractionOutput, practiceId: string) => void;
+  /** Initialize HITL from API analysis (recommended - uses AI + practice library) */
+  initFromApi: (runId: string, practiceId?: string) => Promise<void>;
+
+  /** Initialize HITL from extraction output (client-side fallback) */
+  initFromExtraction: (extraction: ExtractionOutput, practiceId: string, runId?: string) => void;
 
   /** Update patient summary field */
   updatePatientSummary: (field: keyof PatientSummaryDraft, value: unknown) => void;
@@ -225,8 +228,11 @@ export interface HITLActions {
   /** Validate current state */
   validate: () => ValidationError[];
 
-  /** Submit and generate HITL output */
+  /** Submit and generate HITL output (local only) */
   submit: () => HITLVerifiedOutput | null;
+
+  /** Save HITL verification to the run via API */
+  saveToRun: (verifiedBy: string, promptName?: string) => Promise<{ success: boolean; error?: string }>;
 
   /** Reset state */
   reset: () => void;

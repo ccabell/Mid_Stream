@@ -54,6 +54,14 @@ export const selectIsCreateModalOpen = (state: PracticeLibraryStore) => state.is
 export const selectIsEditModalOpen = (state: PracticeLibraryStore) => state.isEditModalOpen;
 export const selectIsImportModalOpen = (state: PracticeLibraryStore) => state.isImportModalOpen;
 
+// Import workflow selectors
+export const selectImportStep = (state: PracticeLibraryStore) => state.importStep;
+export const selectImportFile = (state: PracticeLibraryStore) => state.importFile;
+export const selectParsedItems = (state: PracticeLibraryStore) => state.parsedItems;
+export const selectMatchResults = (state: PracticeLibraryStore) => state.matchResults;
+export const selectSelectedMatches = (state: PracticeLibraryStore) => state.selectedMatches;
+export const selectIsMatching = (state: PracticeLibraryStore) => state.isMatching;
+
 // Computed selectors
 export const selectCurrentTabLoading = (state: PracticeLibraryStore) => {
   switch (state.activeTab) {

@@ -133,26 +133,26 @@ function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
           {/* Metrics row */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
             {/* Intent score */}
-            {intentScore !== undefined && (
+            {intentScore != null && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 100 }}>
-                <TrendingUpIcon sx={{ fontSize: 16, color: getIntentColor(intentScore).main }} />
+                <TrendingUpIcon sx={{ fontSize: 16, color: getIntentColor(intentScore as number).main }} />
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: 10 }}>
                     Intent
                   </Typography>
                   <LinearProgress
                     variant="determinate"
-                    value={Math.min(100, intentScore)}
+                    value={Math.min(100, intentScore as number)}
                     sx={{
                       height: 4,
                       borderRadius: 1,
                       backgroundColor: 'grey.200',
-                      '& .MuiLinearProgress-bar': { backgroundColor: getIntentColor(intentScore).main },
+                      '& .MuiLinearProgress-bar': { backgroundColor: getIntentColor(intentScore as number).main },
                     }}
                   />
                 </Box>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: getIntentColor(intentScore).main, minWidth: 28 }}>
-                  {Math.round(intentScore)}%
+                <Typography variant="caption" sx={{ fontWeight: 600, color: getIntentColor(intentScore as number).main, minWidth: 28 }}>
+                  {Math.round(intentScore as number)}%
                 </Typography>
               </Box>
             )}

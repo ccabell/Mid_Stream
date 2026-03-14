@@ -64,6 +64,14 @@ const initialState: PracticeLibraryState = {
   isCreateModalOpen: false,
   isEditModalOpen: false,
   isImportModalOpen: false,
+
+  // Import workflow state
+  importStep: 0,
+  importFile: null,
+  parsedItems: [],
+  matchResults: [],
+  selectedMatches: [],
+  isMatching: false,
 };
 
 export const usePracticeLibraryStore = createTypedStore<PracticeLibraryStore, PracticeLibraryState>(
@@ -211,11 +219,71 @@ export const usePracticeLibraryStore = createTypedStore<PracticeLibraryStore, Pr
       openImportModal: () => {
         set((state) => {
           state.isImportModalOpen = true;
+          // Reset import state when opening
+          state.importStep = 0;
+          state.importFile = null;
+          state.parsedItems = [];
+          state.matchResults = [];
+          state.selectedMatches = [];
+          state.isMatching = false;
         });
       },
       closeImportModal: () => {
         set((state) => {
           state.isImportModalOpen = false;
+        });
+      },
+
+      // Import workflow
+      setImportStep: (step) => {
+        set((state) => {
+          state.importStep = step;
+        });
+      },
+      setImportFile: (file) => {
+        set((state) => {
+          state.importFile = file;
+        });
+      },
+      setParsedItems: (items) => {
+        set((state) => {
+          state.parsedItems = items;
+        });
+      },
+      setMatchResults: (results) => {
+        set((state) => {
+          state.matchResults = results;
+          // Initialize selected matches with best matches
+          state.selectedMatches = results.map((result, index) => ({
+            sourceIndex: index,
+            match: result.bestMatch,
+            createNew: !result.bestMatch,
+          }));
+        });
+      },
+      setSelectedMatches: (matches) => {
+        set((state) => {
+          state.selectedMatches = matches;
+        });
+      },
+      updateSelectedMatch: (index, match) => {
+        set((state) => {
+          state.selectedMatches[index] = match;
+        });
+      },
+      setIsMatching: (loading) => {
+        set((state) => {
+          state.isMatching = loading;
+        });
+      },
+      resetImportState: () => {
+        set((state) => {
+          state.importStep = 0;
+          state.importFile = null;
+          state.parsedItems = [];
+          state.matchResults = [];
+          state.selectedMatches = [];
+          state.isMatching = false;
         });
       },
 

@@ -10,6 +10,8 @@ import type {
   PLConcern,
   Practice,
 } from 'apiServices/practiceLibrary/types';
+import type { ParsedItem } from 'utils/fileParser';
+import type { MatchResult, SelectedMatch } from 'utils/stringMatcher';
 
 export type LibraryMode = 'global' | 'practice';
 
@@ -65,6 +67,14 @@ export interface PracticeLibraryState {
   isCreateModalOpen: boolean;
   isEditModalOpen: boolean;
   isImportModalOpen: boolean;
+
+  // Import workflow state
+  importStep: 0 | 1 | 2; // 0: upload, 1: review, 2: confirm
+  importFile: File | null;
+  parsedItems: ParsedItem[];
+  matchResults: MatchResult[];
+  selectedMatches: SelectedMatch[];
+  isMatching: boolean;
 }
 
 export interface PracticeLibraryActions {
@@ -109,6 +119,16 @@ export interface PracticeLibraryActions {
   closeEditModal: () => void;
   openImportModal: () => void;
   closeImportModal: () => void;
+
+  // Import workflow
+  setImportStep: (step: 0 | 1 | 2) => void;
+  setImportFile: (file: File | null) => void;
+  setParsedItems: (items: ParsedItem[]) => void;
+  setMatchResults: (results: MatchResult[]) => void;
+  setSelectedMatches: (matches: SelectedMatch[]) => void;
+  updateSelectedMatch: (index: number, match: SelectedMatch) => void;
+  setIsMatching: (loading: boolean) => void;
+  resetImportState: () => void;
 
   // Reset
   reset: () => void;

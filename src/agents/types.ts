@@ -407,64 +407,162 @@ export interface PracticeSettings {
 }
 
 // ============================================================================
-// PRACTICE LIBRARY LOADING
+// PRACTICE LIBRARY - FLEXIBLE FILE-BASED SYSTEM
 // ============================================================================
 
 /**
- * Practice library file types that can be loaded
+ * Supported file types for practice library documents
  */
-export type PracticeLibraryFileType = 'md' | 'json' | 'csv';
+export type PracticeLibraryFileType = 'md' | 'json' | 'csv' | 'txt';
+
+/**
+ * Tags that describe what a file provides (for filtering)
+ */
+export type PracticeLibraryTag =
+  | 'offerings'      // Products, services, packages
+  | 'concerns'       // Patient concerns vocabulary
+  | 'checklists'     // Visit checklists
+  | 'suggestions'    // Suggestion rules
+  | 'aftercare'      // Aftercare instructions
+  | 'sales'          // Sales excellence guidance
+  | 'pricing'        // Pricing information
+  | 'education'      // Patient education content
+  | 'protocols'      // Treatment protocols
+  | 'templates'      // Document templates
+  | 'reference';     // General reference material
 
 /**
  * Reference to a practice library file
  */
 export interface PracticeLibraryFile {
+  /** Filename (e.g., "CaloSpa_Concerns.csv") */
   filename: string;
+
+  /** File type */
   type: PracticeLibraryFileType;
+
+  /** Relative path from practice library root */
   path: string;
+
+  /** Human-readable description */
   description?: string;
+
+  /** Tags describing what this file provides */
+  tags?: PracticeLibraryTag[];
+
+  /** Whether this is a shared file (applies to all practices) */
+  shared?: boolean;
 }
 
 /**
- * Practice library manifest (what's available for a practice)
+ * Practice library manifest - lists all available files for a practice
+ *
+ * Each practice folder should have a manifest.json file listing its contents.
+ * Shared files (in the root) are automatically available to all practices.
  */
 export interface PracticeLibraryManifest {
-  practice_id: string;
-  practice_name: string;
+  /** Practice identifier */
+  practiceId: string;
+
+  /** Display name */
+  practiceName: string;
+
+  /** Practice-specific files */
   files: PracticeLibraryFile[];
-  last_updated?: string;
+
+  /** Shared files to include (filenames from root practice-library folder) */
+  includeShared?: string[];
+
+  /** When this manifest was last updated */
+  lastUpdated?: string;
 }
 
 /**
- * How agents should request practice library data
+ * How agents request practice library data
+ *
+ * Agents can request files by:
+ * - Specific filenames
+ * - Tags (e.g., "concerns", "suggestions")
+ * - Or request all files
  */
 export interface PracticeLibraryRequest {
   /** Practice identifier */
   practiceId: string;
 
-  /** What data is needed */
-  needs: {
-    offerings?: boolean;
-    concerns?: boolean;
-    checklists?: boolean;
-    suggestionRules?: boolean;
-    aftercareTemplates?: boolean;
-  };
+  /** Request specific files by filename */
+  files?: string[];
+
+  /** Request files by tag (e.g., ["concerns", "suggestions"]) */
+  tags?: PracticeLibraryTag[];
+
+  /** Include shared files (SALES_EXCELLENCE_REFERENCE.md, etc.) */
+  includeShared?: boolean;
+
+  /** Load all available files for this practice */
+  loadAll?: boolean;
 }
 
 /**
- * Loaded practice library data (subset based on request)
+ * A loaded file with its content
+ */
+export interface LoadedPracticeFile {
+  /** Original filename */
+  filename: string;
+
+  /** File type */
+  type: PracticeLibraryFileType;
+
+  /** Raw content as string */
+  content: string;
+
+  /** For JSON files, the parsed object */
+  parsed?: unknown;
+
+  /** For CSV files, parsed rows */
+  rows?: Record<string, string>[];
+
+  /** Tags this file provides */
+  tags?: PracticeLibraryTag[];
+
+  /** Whether this is a shared file */
+  shared?: boolean;
+
+  /** Any error that occurred loading this file */
+  error?: string;
+}
+
+/**
+ * Loaded practice library data returned to agents
  */
 export interface PracticeLibraryData {
+  /** Practice identifier */
   practiceId: string;
+
+  /** Display name */
   practiceName: string;
-  offerings?: PracticeOffering[];
-  concerns?: PracticeConcern[];
-  checklists?: PracticeChecklist[];
-  suggestionRules?: string;  // Markdown content
-  aftercareTemplates?: Record<string, AftercarePTemplate>;
+
+  /** All loaded files */
+  files: LoadedPracticeFile[];
+
+  /** Quick access: files indexed by filename */
+  byFilename: Record<string, LoadedPracticeFile>;
+
+  /** Quick access: files indexed by tag */
+  byTag: Record<PracticeLibraryTag, LoadedPracticeFile[]>;
+
+  /** Settings if available */
   settings?: PracticeSettings;
 }
+
+// ============================================================================
+// PRACTICE LIBRARY - LEGACY STRUCTURED TYPES (for typed access)
+// ============================================================================
+
+/**
+ * These types are still available for agents that want typed access
+ * to specific data structures. The loader can parse JSON files into
+ * these types when the structure matches.
+ */
 
 /**
  * Aftercare template by treatment category

@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Fix PLServicesData type issue
 /**
  * Practice Library Page
  *
@@ -66,10 +64,10 @@ function SearchAndActions() {
   const isGlobalMode = usePracticeLibraryStore(practiceLibrarySelectors.selectIsGlobalLibraryMode);
   const actions = usePracticeLibraryStore(practiceLibrarySelectors.selectActions);
   const selectedPractice = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPractice);
-  const services = usePracticeLibraryStore(practiceLibrarySelectors.selectServices);
-  const products = usePracticeLibraryStore(practiceLibrarySelectors.selectProducts);
-  const packages = usePracticeLibraryStore(practiceLibrarySelectors.selectPackages);
-  const concerns = usePracticeLibraryStore(practiceLibrarySelectors.selectConcerns);
+  const serviceItems = usePracticeLibraryStore(practiceLibrarySelectors.selectServiceItems);
+  const productItems = usePracticeLibraryStore(practiceLibrarySelectors.selectProductItems);
+  const packageItems = usePracticeLibraryStore(practiceLibrarySelectors.selectPackageItems);
+  const concernItems = usePracticeLibraryStore(practiceLibrarySelectors.selectConcernItems);
 
   const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null);
   const exportMenuOpen = Boolean(exportMenuAnchor);
@@ -85,7 +83,7 @@ function SearchAndActions() {
   const handleExport = (format: ExportOptions['format']) => {
     if (!selectedPractice) return;
 
-    exportPracticeLibrary(selectedPractice, services, products, packages, concerns, {
+    exportPracticeLibrary(selectedPractice, serviceItems, productItems, packageItems, concernItems, {
       format,
       includeInactive: false,
     });

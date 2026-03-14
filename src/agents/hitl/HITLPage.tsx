@@ -34,6 +34,7 @@ import {
   NeedsAttentionSection,
   ChecklistSection,
   TCPSettingsPanel,
+  ClinicalReviewSection,
 } from './components';
 import type { HITLStep } from './types';
 import { COMMITMENT_COLORS, COMMITMENT_LABELS } from './types';
@@ -286,8 +287,17 @@ export function HITLPage({
           <Stack spacing={3}>
             <Alert severity="info">
               <AlertTitle>Review Before Approval</AlertTitle>
-              Review your verification and settings below. Click "Approve & Generate TCP" when ready.
+              Review your verification and settings below. Complete the clinical review, then click "Approve & Generate TCP".
             </Alert>
+
+            {/* Clinical Review Section */}
+            <ClinicalReviewSection
+              clinicalReviewRequired={state.clinicalReviewRequired}
+              clinicalReviewCompleted={state.clinicalReviewCompleted}
+              clinicalReviewedBy={state.clinicalReviewedBy}
+              clinicalReviewedAt={state.clinicalReviewedAt}
+              onCompleteClinicalReview={actions.completeClinicalReview}
+            />
 
             <TCPSettingsPanel
               settings={state.draft.settings}
@@ -339,8 +349,11 @@ export function HITLPage({
             color="success"
             startIcon={<CheckCircleIcon />}
             onClick={handleApprove}
+            disabled={state.clinicalReviewRequired && !state.clinicalReviewCompleted}
           >
-            Approve & Generate TCP
+            {state.clinicalReviewRequired && !state.clinicalReviewCompleted
+              ? 'Complete Clinical Review First'
+              : 'Approve & Generate TCP'}
           </Button>
         ) : (
           <Button

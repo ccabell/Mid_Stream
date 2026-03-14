@@ -20,8 +20,7 @@
     "downlevelIteration": false,
     "noUncheckedIndexedAccess": true,
     "allowUmdGlobalAccess": true,
-    "baseUrl": "./src",
-    "types": ["vite/client"]
+    "baseUrl": "./src"
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/types"],
   "exclude": ["node_modules"]

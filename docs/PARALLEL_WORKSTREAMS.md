@@ -2,126 +2,232 @@
 
 These prompts are designed to be run in separate Claude Code windows. Each workstream is independent and won't conflict with others.
 
-**IMPORTANT:** All work happens in `C:\Users\Chris\Mid_Stream`. Do NOT modify Prompt Runner.
+**IMPORTANT:**
+- All work happens in `C:\Users\Chris\Mid_Stream`
+- Do NOT modify Prompt Runner backend
+- All agents must implement `AgentModule` interface from `src/agents/types.ts`
+- Register agents in `src/agents/registry.ts`
+- Read `docs/AGENT_SETUP_GUIDE.md` before starting
 
 ---
 
 ## Workstream 1: HITL Verification Agent
 
-**Purpose:** Build the Human-In-The-Loop verification UI that analyzes extraction output against the practice library and asks provider verification questions.
+**Purpose:** Build the Human-In-The-Loop verification agent that analyzes extraction output against the practice library and asks provider verification questions.
+
+**Agent ID:** `hitl_verification`
+**Input Type:** `extraction_output`
+**Output Type:** `HITLVerifiedOutput` (defined in `src/agents/types.ts`)
+**Category:** `verification`
 
 ### Prompt to Copy:
 
 ```
+## Context Header
+First, read and follow this context header:
+C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\CHAT_PROMPTS\CONTEXT_HEADER.md
+
+## Your Task: Build the HITL Verification Agent
+
 I'm working on the Mid_Stream project at C:\Users\Chris\Mid_Stream
 
-This is a React 19 + MUI v7 + TypeScript project that serves as a unified frontend for A360's Intelligence Extraction ecosystem. The backend is Prompt Runner (DO NOT MODIFY).
-
-## Your Task: Build the HITL Verification Agent UI
-
-The HITL (Human-In-The-Loop) system analyzes transcript extractions against the practice library and presents verification questions to providers before generating a TCP.
-
-### What HITL Does:
+Build the HITL (Human-In-The-Loop) verification agent. This agent:
 1. Takes extraction output (from Pass 1 + Pass 2)
 2. Compares offerings against practice library
 3. Identifies questions/ambiguities
 4. Generates verification checklist for provider
+5. Outputs HITLVerifiedOutput for TCP agent
 
-### Key Questions HITL Asks:
+### Agent Interface
+
+Your agent MUST implement the AgentModule interface. Start by reading:
+- `src/agents/types.ts` - All shared interfaces
+- `docs/AGENT_SETUP_GUIDE.md` - Step-by-step instructions
+
+### Files to Create:
+
+```
+src/agents/hitl/
+├── index.ts                    # Exports hitlAgent: AgentModule
+├── HITLPage.tsx               # Main page component (AgentPageProps)
+├── components/
+│   ├── VerificationChecklist.tsx
+│   ├── SuggestionCard.tsx
+│   ├── OfferingVerification.tsx
+│   ├── PatientSummary.tsx
+│   └── index.ts
+├── hooks/
+│   ├── useHITLState.ts
+│   └── index.ts
+├── utils/
+│   ├── matchOfferings.ts      # Match extraction to practice library
+│   └── index.ts
+└── README.md
+```
+
+### Agent Definition:
+
+```typescript
+export const hitlAgent: AgentModule = {
+  id: 'hitl_verification',
+  name: 'HITL Verification',
+  description: 'Provider verification of extraction output',
+  version: '1.0.0',
+  inputType: 'extraction_output',
+  requiredFields: ['prompt_1', 'prompt_2'],
+  capabilities: {
+    canRunStandalone: false,
+    canRunFromRunDetail: true,
+    canBeShared: false,
+    requiresPracticeLibrary: true,
+    chainableOutputs: ['tcp_generator'],
+  },
+  category: 'verification',
+  icon: 'FactCheck',
+  Page: HITLPage,
+};
+```
+
+### HITL Verification Questions:
 - **Product/Service Verification:** "Did the provider discuss [X]?"
 - **Missing Items:** "Practice offers [Y] for this concern - was it mentioned?"
 - **Clarification:** "[Service] was mentioned but area unclear - confirm treatment area"
 - **Suggestions:** "Based on concerns, consider adding [Z] to treatment plan"
 
-### Files to Create:
-1. `src/pages/HITLPage.tsx` - Main HITL verification page
-2. `src/components/hitl/VerificationChecklist.tsx` - Checklist UI
-3. `src/components/hitl/SuggestionCard.tsx` - AI suggestion display
-4. `src/components/hitl/OfferingVerification.tsx` - Verify each offering
-5. `src/apiServices/hitl.api.ts` - HITL API calls
-6. `src/stores/hitlStore/` - Zustand store (A360 pattern: store.ts, hooks.ts, selectors.ts, types.ts)
+### Output Structure (HITLVerifiedOutput):
+Use the type defined in `src/agents/types.ts` - includes:
+- patient_summary (primary_concern, goals, timeline)
+- todays_treatments (VerifiedTreatment[])
+- recommendations (VerifiedRecommendation[])
+- needs_attention (objections, hesitations, concerns)
+- checklist (completion_rate, items)
+- settings (TCPSettings)
 
-### API Endpoints (Prompt Runner):
-- GET `/runs/{run_id}/hitl` - Get HITL questions for a run
-- POST `/runs/{run_id}/hitl/verify` - Submit provider verification
-- GET `/practice/{practice_id}/offerings` - Get practice library for matching
+### Access Practice Library:
+
+```typescript
+import { usePracticeLibraryStore } from 'stores';
+
+const services = usePracticeLibraryStore(state => state.services);
+const products = usePracticeLibraryStore(state => state.products);
+```
 
 ### Reference Documents:
 - `C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\HITL-TCP-Project\prompts\HITL_VERIFICATION_PROMPT.md`
 - `C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\HITL-TCP-Project\prompts\V3_EXTRACTION_SCHEMA.md`
 
-### A360 Patterns to Follow:
-- Check `C:\Users\Chris\repos\a360\a360-web-app\src` for patterns
-- Zustand stores: store.ts, hooks.ts, selectors.ts, types.ts
-- API services in `apiServices/` folder
-- Use baseUrl imports (not @/ aliases)
-
-### UI Requirements:
-- Show extraction summary at top
-- List each offering with verification checkbox
-- Show AI suggestions with accept/reject buttons
-- "Questions" section for clarifications
-- Submit button to complete verification
-- Navigate to TCP generation after approval
-
-Start by reading the HITL verification prompt and V3 schema, then build the components.
+### After Building:
+1. Register in `src/agents/registry.ts`
+2. Test with mock extraction data
+3. Verify HITLVerifiedOutput matches type definition
 ```
 
 ---
 
-## Workstream 2: TCP Generation Tool
+## Workstream 2: TCP Generation Agent
 
-**Purpose:** Build the Treatment & Care Plan generation UI that takes verified HITL data and creates a TCP based on practice library offerings.
+**Purpose:** Build the Treatment & Care Plan generation agent that takes verified HITL data and creates a TCP.
+
+**Agent ID:** `tcp_generator`
+**Input Type:** `hitl_verified`
+**Output Type:** `tcp_output` (TCP document)
+**Category:** `generation`
 
 ### Prompt to Copy:
 
 ```
+## Context Header
+First, read and follow this context header:
+C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\CHAT_PROMPTS\CONTEXT_HEADER.md
+
+## Your Task: Build the TCP Generation Agent
+
 I'm working on the Mid_Stream project at C:\Users\Chris\Mid_Stream
 
-This is a React 19 + MUI v7 + TypeScript project that serves as a unified frontend for A360's Intelligence Extraction ecosystem. The backend is Prompt Runner (DO NOT MODIFY).
-
-## Your Task: Build the TCP (Treatment & Care Plan) Generation Tool
-
-The TCP tool takes verified HITL output and generates a comprehensive treatment plan using the practice library.
-
-### What TCP Does:
-1. Takes verified extraction + HITL approvals
-2. Matches to practice products/services/packages
+Build the TCP (Treatment & Care Plan) generation agent. This agent:
+1. Takes HITLVerifiedOutput (from HITL agent)
+2. Matches verified items to practice products/services/packages
 3. Generates tiered treatment options (Good/Better/Best)
-4. Creates patient-facing care plan
+4. Creates patient-facing care plan with pricing
+
+### Agent Interface
+
+Your agent MUST implement the AgentModule interface. Start by reading:
+- `src/agents/types.ts` - All shared interfaces
+- `docs/AGENT_SETUP_GUIDE.md` - Step-by-step instructions
+
+### Files to Create:
+
+```
+src/agents/tcp/
+├── index.ts                    # Exports tcpAgent: AgentModule
+├── TCPPage.tsx                # Main page component (AgentPageProps)
+├── components/
+│   ├── TreatmentPlan.tsx
+│   ├── TierSelector.tsx       # Good/Better/Best
+│   ├── PricingComparison.tsx  # A la carte vs package
+│   ├── TimelineView.tsx
+│   ├── GoalsSummary.tsx
+│   └── index.ts
+├── hooks/
+│   ├── useTCPGeneration.ts
+│   └── index.ts
+├── utils/
+│   ├── calculatePricing.ts
+│   ├── generateTiers.ts
+│   └── index.ts
+└── README.md
+```
+
+### Agent Definition:
+
+```typescript
+export const tcpAgent: AgentModule = {
+  id: 'tcp_generator',
+  name: 'TCP Generator',
+  description: 'Generate Treatment & Care Plans from verified data',
+  version: '1.0.0',
+  inputType: 'hitl_verified',
+  requiredFields: ['todays_treatments', 'recommendations', 'settings'],
+  capabilities: {
+    canRunStandalone: false,
+    canRunFromRunDetail: true,
+    canBeShared: true,  // Can be exported as standalone app
+    requiresPracticeLibrary: true,
+  },
+  category: 'generation',
+  icon: 'Description',
+  Page: TCPPage,
+};
+```
 
 ### TCP Components:
 - **Treatment Recommendations:** Based on verified concerns + offerings
 - **Package Options:** Match to practice packages when applicable
-- **Pricing Tiers:** A la carte vs package comparison
+- **Pricing Tiers:** A la carte vs package comparison with savings
 - **Timeline:** Treatment sequence and follow-up schedule
-- **Patient Goals:** Aligned with extracted goals
+- **Patient Goals:** Aligned with extracted and verified goals
 
-### Files to Create:
-1. `src/pages/TCPPage.tsx` - Main TCP generation/view page
-2. `src/components/tcp/TreatmentPlan.tsx` - Full plan display
-3. `src/components/tcp/TierSelector.tsx` - Good/Better/Best selector
-4. `src/components/tcp/PricingComparison.tsx` - A la carte vs package
-5. `src/components/tcp/TimelineView.tsx` - Treatment timeline
-6. `src/apiServices/tcp.api.ts` - TCP API calls
-7. `src/stores/tcpStore/` - Zustand store (A360 pattern)
+### Input (HITLVerifiedOutput):
+Your agent receives `hitlOutput` prop. Key fields:
+- `todays_treatments` - What was performed/scheduled
+- `recommendations` - What to recommend
+- `patient_summary` - Goals, concerns, timeline
+- `settings` - Language, pricing, format preferences
 
-### API Endpoints (Prompt Runner):
-- POST `/runs/{run_id}/tcp/generate` - Generate TCP from verified HITL
-- GET `/runs/{run_id}/tcp` - Get existing TCP for a run
-- PATCH `/runs/{run_id}/tcp` - Update TCP selections
-- GET `/practice/{practice_id}/packages` - Get practice packages
+### Access Practice Library:
+
+```typescript
+import { usePracticeLibraryStore } from 'stores';
+
+const packages = usePracticeLibraryStore(state => state.packages);
+const services = usePracticeLibraryStore(state => state.services);
+```
 
 ### Reference Documents:
 - `C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\HITL-TCP-Project\TCP_MASTER_PLAN.md`
 - `C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\HITL-TCP-Project\requirements\00_PROJECT_REQUIREMENTS.md`
 - `C:\Users\Chris\Dropbox\NewCO\A360 - CORE DOCUMENTS\Core Documents\tcp_treatment_care_plan_intelligence_engine.md`
-
-### A360 Patterns to Follow:
-- Check `C:\Users\Chris\repos\a360\a360-web-app\src` for patterns
-- Zustand stores: store.ts, hooks.ts, selectors.ts, types.ts
-- API services in `apiServices/` folder
-- Use baseUrl imports (not @/ aliases)
 
 ### UI Requirements:
 - Patient goals summary at top
@@ -131,38 +237,103 @@ The TCP tool takes verified HITL output and generates a comprehensive treatment 
 - "Generate PDF" button
 - "Send to Patient" action
 
-Start by reading the TCP Master Plan and project requirements, then build the components.
+### After Building:
+1. Register in `src/agents/registry.ts`
+2. Test with mock HITLVerifiedOutput
+3. Verify pricing calculations
 ```
 
 ---
 
-## Workstream 3: Extraction Runner
+## Workstream 3: Extraction Runner Agent
 
-**Purpose:** Build UI to run transcript extractions through Pass 1 and Pass 2 prompts.
+**Purpose:** Build agent to run transcript extractions through Pass 1 and Pass 2 prompts.
+
+**Agent ID:** `extraction_runner`
+**Input Type:** `custom` (raw transcript)
+**Output Type:** `extraction_output`
+**Category:** `extraction`
 
 ### Prompt to Copy:
 
 ```
+## Context Header
+First, read and follow this context header:
+C:\Users\Chris\Dropbox\NewCO\Intelligence Extraction\CHAT_PROMPTS\CONTEXT_HEADER.md
+
+## Your Task: Build the Extraction Runner Agent
+
 I'm working on the Mid_Stream project at C:\Users\Chris\Mid_Stream
 
-This is a React 19 + MUI v7 + TypeScript project that serves as a unified frontend for A360's Intelligence Extraction ecosystem. The backend is Prompt Runner (DO NOT MODIFY).
+Build the Extraction Runner agent. This agent:
+1. Accepts raw transcript text
+2. Runs V3 two-pass extraction (Pass 1 + Pass 2)
+3. Displays results using extraction cards
+4. Outputs ExtractionOutput for HITL agent
 
-## Your Task: Build the Extraction Runner UI
+### Agent Interface
 
-The Extraction Runner allows users to process transcripts through the V3 two-pass extraction system.
-
-### What Extraction Does:
-1. **Pass 1:** Extract visit context, patient goals, offerings discussed
-2. **Pass 2:** Extract outcome, intelligence scores, opportunities
+Your agent MUST implement the AgentModule interface. Start by reading:
+- `src/agents/types.ts` - All shared interfaces (includes Pass1Output, Pass2Output)
+- `docs/AGENT_SETUP_GUIDE.md` - Step-by-step instructions
 
 ### Files to Create:
-1. `src/pages/ExtractionPage.tsx` - Run new extractions
-2. `src/components/extraction/TranscriptInput.tsx` - Paste/upload transcript
-3. `src/components/extraction/ExtractionProgress.tsx` - Show extraction status
-4. `src/components/extraction/ExtractionResults.tsx` - Display results
-5. `src/apiServices/extraction.api.ts` - Extraction API calls
 
-### API Endpoints (Prompt Runner):
+```
+src/agents/extraction_runner/
+├── index.ts                       # Exports extractionAgent: AgentModule
+├── ExtractionRunnerPage.tsx      # Main page component
+├── components/
+│   ├── TranscriptInput.tsx       # Text area for transcript
+│   ├── ExtractionProgress.tsx    # Pass 1/2 progress
+│   ├── ExtractionResults.tsx     # Display results
+│   ├── PassCard.tsx              # Individual pass result
+│   └── index.ts
+├── hooks/
+│   ├── useExtractionRunner.ts
+│   └── index.ts
+└── README.md
+```
+
+### Agent Definition:
+
+```typescript
+export const extractionAgent: AgentModule = {
+  id: 'extraction_runner',
+  name: 'Extraction Runner',
+  description: 'Run V3 extraction on transcripts',
+  version: '1.0.0',
+  inputType: 'custom',
+  requiredFields: [],  // Takes raw transcript
+  capabilities: {
+    canRunStandalone: true,  // Can run from /agents/extraction_runner
+    canRunFromRunDetail: false,
+    canBeShared: false,
+    chainableOutputs: ['hitl_verification'],
+  },
+  category: 'extraction',
+  icon: 'Psychology',
+  Page: ExtractionRunnerPage,
+};
+```
+
+### Extraction Passes:
+
+**Pass 1 Output:**
+- visit_context (visit_type, reason, referred_by, motivating_event)
+- patient_goals (primary_concern, secondary_concerns, goals)
+- areas (treatment_areas, concern_areas)
+- interests (stated_interests, future_interests)
+- offerings (name, type, disposition, area, value)
+
+**Pass 2 Output:**
+- outcome (status, summary)
+- next_steps (action, timeframe, owner)
+- patient_signals (commitment_level)
+- objections, hesitations, concerns
+- visit_checklist
+
+### API Endpoints (Prompt Runner - DO NOT MODIFY):
 - POST `/extract` - Run extraction on transcript
 - GET `/runs/{run_id}` - Get extraction results
 
@@ -176,52 +347,96 @@ The Extraction Runner allows users to process transcripts through the V3 two-pas
 - Practice selector dropdown
 - "Run Extraction" button with loading state
 - Progress indicator for each pass
-- Results display with V3 schema cards
-- Link to HITL verification after completion
+- Results display with V3 schema sections
+- "Continue to HITL" button after completion
 
-Start by reading the V3 schema and prompts, then build the components.
+### After Building:
+1. Register in `src/agents/registry.ts`
+2. Test with sample transcript
+3. Verify output matches ExtractionOutput type
 ```
 
 ---
 
-## Working Directory Structure
+## Agent Directory Structure
 
-All workstreams build into these folders:
+All agents follow this pattern:
 ```
-Mid_Stream/
-├── src/
-│   ├── apiServices/
-│   │   ├── practiceLibrary/    # Workstream 0 (this chat)
-│   │   ├── hitl.api.ts         # Workstream 1
-│   │   ├── tcp.api.ts          # Workstream 2
-│   │   └── extraction.api.ts   # Workstream 3
+Mid_Stream/src/agents/
+├── types.ts                    # Shared interfaces (DO NOT MODIFY)
+├── registry.ts                 # Agent registration (ADD YOUR AGENT)
+├── hitl/                       # Workstream 1
+│   ├── index.ts
+│   ├── HITLPage.tsx
 │   ├── components/
-│   │   ├── practiceLibrary/    # Workstream 0
-│   │   ├── hitl/               # Workstream 1
-│   │   ├── tcp/                # Workstream 2
-│   │   └── extraction/         # Workstream 3
-│   ├── pages/
-│   │   ├── PracticeLibraryPage.tsx    # Workstream 0
-│   │   ├── HITLPage.tsx               # Workstream 1
-│   │   ├── TCPPage.tsx                # Workstream 2
-│   │   └── ExtractionPage.tsx         # Workstream 3
-│   └── stores/
-│       ├── practiceLibraryStore/      # Workstream 0
-│       ├── hitlStore/                 # Workstream 1
-│       └── tcpStore/                  # Workstream 2
+│   ├── hooks/
+│   └── README.md
+├── tcp/                        # Workstream 2
+│   ├── index.ts
+│   ├── TCPPage.tsx
+│   ├── components/
+│   ├── hooks/
+│   └── README.md
+└── extraction_runner/          # Workstream 3
+    ├── index.ts
+    ├── ExtractionRunnerPage.tsx
+    ├── components/
+    ├── hooks/
+    └── README.md
 ```
+
+---
+
+## Data Flow
+
+```
+┌────────────────────┐
+│  Raw Transcript    │
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐
+│ Extraction Runner  │ ← Workstream 3
+│ (extraction_output)│
+└─────────┬──────────┘
+          │
+          ▼
+┌────────────────────┐    ┌────────────────────┐
+│ HITL Verification  │◄───│ Practice Library   │
+│ (hitl_verified)    │    │ (services, etc.)   │
+└─────────┬──────────┘    └────────────────────┘
+          │                         ▲
+          ▼                         │
+┌────────────────────┐              │
+│  TCP Generator     │──────────────┘
+│  (tcp_output)      │ ← Workstream 2
+└────────────────────┘
+```
+
+---
 
 ## Git Workflow
 
 Each workstream should:
-1. Work on its own feature files
-2. Commit frequently with clear messages
-3. Avoid modifying shared files (App.tsx, routes, etc.) - those will be merged later
+1. Work ONLY in its `src/agents/[agent-name]/` folder
+2. Update `src/agents/registry.ts` to register the agent
+3. Commit frequently with clear messages
+4. Avoid modifying other shared files
 
 ---
 
 ## Coordination Notes
 
-- **This chat (Workstream 0)** handles Practice Library Manager and route integration
-- Other workstreams build isolated components
-- After all workstreams complete, we'll integrate routes and navigation
+- **Workstream 0 (This Chat):** Practice Library Manager and coordination
+- **Workstream 1:** HITL Verification Agent
+- **Workstream 2:** TCP Generation Agent
+- **Workstream 3:** Extraction Runner Agent
+
+All agents consume data from:
+- Runs API (extraction output)
+- Practice Library (via Zustand store)
+
+After all agents complete, we'll:
+1. Add agent routes to App.tsx
+2. Add agent links to Sidebar
+3. Wire up agent chaining

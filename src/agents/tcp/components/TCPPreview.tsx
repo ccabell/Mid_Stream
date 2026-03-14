@@ -1,48 +1,230 @@
 /**
- * TCP Preview
+ * TCP Preview (Production-style)
  *
- * Displays the final generated TCP document in a printable format.
+ * Displays the final generated TCP document using block-based rendering.
  */
 
+import { forwardRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
-import Divider from '@mui/material/Divider';
-import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import Button from '@mui/material/Button';
+import TableContainer from '@mui/material/TableContainer';
 import PrintIcon from '@mui/icons-material/Print';
-import DownloadIcon from '@mui/icons-material/Download';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import EventIcon from '@mui/icons-material/Event';
 
-import type { TCPDocument } from '../types';
+import type { TCPDocument, TreatmentCarePlan } from '../types';
+import { AICard } from './AICard';
+import { AIHeading } from './AIHeading';
+import { AIText } from './AIText';
+import { FollowUpTimeline } from './FollowUpTimeline';
+import { TCPHeader } from './TCPHeader';
 
 interface TCPPreviewProps {
   document: TCPDocument;
   onPrint?: () => void;
-  onDownload?: () => void;
 }
 
-export function TCPPreview({ document, onPrint, onDownload }: TCPPreviewProps) {
-  const tcp = document.treatment_care_plan;
+// Print-safe wrapper component
+function PrintSafeBlock({ children }: { children: React.ReactNode }) {
+  return (
+    <Box sx={{ '@media print': { breakInside: 'avoid', pageBreakInside: 'avoid' } }}>
+      {children}
+    </Box>
+  );
+}
 
-  const formatCurrency = (value: string | undefined) => {
-    if (!value) return '-';
-    const num = parseFloat(value);
-    return isNaN(num) ? value : `$${num.toFixed(2)}`;
-  };
+// Section wrapper with border styling
+interface SectionProps {
+  heading: { title: string; subtitle?: string };
+  children: React.ReactNode;
+  hasMoreContent?: boolean;
+}
+
+function Section({ heading, children, hasMoreContent }: SectionProps) {
+  return (
+    <Stack>
+      <PrintSafeBlock>
+        <Stack gap={3}>
+          <AIHeading title={heading.title} subtitle={heading.subtitle} size="large" />
+          <Stack
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: '12px',
+              borderBottomLeftRadius: hasMoreContent ? 0 : '12px',
+              borderBottomRightRadius: hasMoreContent ? 0 : '12px',
+              borderBottom: hasMoreContent ? 'none' : '1px solid',
+              p: 2,
+              pb: 3,
+              mt: 3,
+            }}
+          >
+            {children}
+          </Stack>
+        </Stack>
+      </PrintSafeBlock>
+    </Stack>
+  );
+}
+
+function SectionContinuation({ children }: { children: React.ReactNode }) {
+  return (
+    <Box
+      sx={{
+        border: '1px solid',
+        borderColor: 'divider',
+        borderTop: 'none',
+        borderBottomLeftRadius: '12px',
+        borderBottomRightRadius: '12px',
+        p: 2,
+        pt: 0,
+      }}
+    >
+      <Stack gap={3}>{children}</Stack>
+    </Box>
+  );
+}
+
+// Card group renderer
+interface CardGroupProps {
+  title?: string;
+  cards: Array<{ title: string; price?: string; items: Array<{ label: string; value: string }> }>;
+  emptyText?: string;
+}
+
+function CardGroup({ title, cards, emptyText }: CardGroupProps) {
+  if (cards.length === 0) {
+    return (
+      <Stack gap={1}>
+        {title && <AIHeading title={title} size="medium" />}
+        <Typography variant="body2" fontWeight={400}>
+          {emptyText || 'No items'}
+        </Typography>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap={1}>
+      {title && <AIHeading title={title} size="medium" />}
+      <Stack gap={3}>
+        {cards.map((card, index) => (
+          <PrintSafeBlock key={index}>
+            <AICard title={card.title} price={card.price} items={card.items} />
+          </PrintSafeBlock>
+        ))}
+      </Stack>
+    </Stack>
+  );
+}
+
+// Table renderer
+interface MaintenanceTableProps {
+  title?: string;
+  rows: Array<{ treatment: string; frequency: string }>;
+  emptyText?: string;
+}
+
+function MaintenanceTable({ title, rows, emptyText }: MaintenanceTableProps) {
+  if (rows.length === 0) {
+    return (
+      <Stack gap={1}>
+        {title && <AIHeading title={title} size="medium" />}
+        <Typography variant="body2" fontWeight={400}>
+          {emptyText || 'No items'}
+        </Typography>
+      </Stack>
+    );
+  }
+
+  return (
+    <Stack gap={1}>
+      {title && <AIHeading title={title} size="medium" />}
+      <TableContainer
+        sx={{
+          borderRadius: '8px',
+          border: '1px solid',
+          borderColor: 'divider',
+          '@media print': {
+            overflow: 'visible !important',
+            '& thead': { display: 'table-header-group' },
+            '& tr': { breakInside: 'avoid', pageBreakInside: 'avoid' },
+          },
+        }}
+      >
+        <Table size="medium">
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Treatment</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Frequency</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map((row, index) => (
+              <TableRow key={index}>
+                <TableCell>{row.treatment}</TableCell>
+                <TableCell>{row.frequency}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Stack>
+  );
+}
+
+// List renderer
+interface ListSectionProps {
+  title?: string;
+  items: string[];
+  emptyText?: string;
+}
+
+function ListSection({ title, items, emptyText }: ListSectionProps) {
+  return (
+    <Stack gap={0.5}>
+      {title && <AIHeading title={title} size="medium" />}
+      {items.length === 0 ? (
+        <AIText value={emptyText || ''} />
+      ) : (
+        <AIText value={items} variant="list" />
+      )}
+    </Stack>
+  );
+}
+
+// Build treatment cards from array
+function buildTreatmentCards(treatments: Array<{ name: string; description: string; details: string; cost: string }>) {
+  return treatments.map(t => ({
+    title: t.name,
+    price: t.cost,
+    items: [
+      { label: 'Description', value: t.description },
+      { label: 'Details', value: t.details },
+    ],
+  }));
+}
+
+// Build skincare cards
+function buildSkincareCards(steps: Array<{ product: string; purpose: string; estimated_cost: string }>) {
+  return steps.map(s => ({
+    title: s.product,
+    price: s.estimated_cost,
+    items: [{ label: 'Purpose', value: s.purpose }],
+  }));
+}
+
+// Main component
+export const TCPPreview = forwardRef<HTMLDivElement, TCPPreviewProps>(function TCPPreview(
+  { document, onPrint },
+  ref
+) {
+  const tcp = document.treatment_care_plan;
 
   const handlePrint = () => {
     if (onPrint) {
@@ -52,6 +234,27 @@ export function TCPPreview({ document, onPrint, onDownload }: TCPPreviewProps) {
     }
   };
 
+  const documentInfo = {
+    document: 'Treatment & Care Plan',
+    patient: document.patient,
+    provider: document.provider,
+    date: document.consultation_date,
+  };
+
+  const immediateTreatments = buildTreatmentCards(tcp.immediate_intervention.treatments);
+  const shortTermTreatments = buildTreatmentCards(tcp.short_term_goals.treatments);
+  const followUpEvents = tcp.short_term_goals.follow_up_schedule.map((e, i) => ({
+    step: i + 1,
+    date: e.date,
+    title: e.event,
+  }));
+  const morningCards = tcp.long_term_strategy.skincare_routine
+    ? buildSkincareCards(tcp.long_term_strategy.skincare_routine.morning)
+    : [];
+  const eveningCards = tcp.long_term_strategy.skincare_routine
+    ? buildSkincareCards(tcp.long_term_strategy.skincare_routine.evening)
+    : [];
+
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
       {/* Header Actions */}
@@ -59,315 +262,139 @@ export function TCPPreview({ document, onPrint, onDownload }: TCPPreviewProps) {
         <Button variant="outlined" startIcon={<PrintIcon />} onClick={handlePrint}>
           Print
         </Button>
-        {onDownload && (
-          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={onDownload}>
-            Download PDF
-          </Button>
-        )}
       </Stack>
 
-      {/* Document */}
-      <Paper
+      {/* Document Content */}
+      <Stack
+        ref={ref}
+        gap={3}
         sx={{
+          bgcolor: 'background.paper',
           p: 4,
+          borderRadius: 2,
+          boxShadow: 1,
+          '@page': { margin: '5mm' },
           '@media print': {
+            px: 1,
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
             boxShadow: 'none',
-            border: 'none',
+            borderRadius: 0,
           },
         }}
       >
-        {/* Document Header */}
-        <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Treatment Care Plan
-          </Typography>
-          <Divider sx={{ my: 2 }} />
-          <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Patient
-              </Typography>
-              <Typography variant="h6">{document.patient}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Date
-              </Typography>
-              <Typography variant="h6">{document.consultation_date}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Provider
-              </Typography>
-              <Typography variant="h6">{document.provider || '-'}</Typography>
-            </Box>
-          </Stack>
-        </Box>
+        {/* Header */}
+        <TCPHeader documentInfo={documentInfo} />
 
         {/* Immediate Intervention */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" color="primary" gutterBottom>
-            Immediate Intervention
-          </Typography>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            {tcp.immediate_intervention.focus}
-          </Typography>
+        <Section
+          heading={{
+            title: 'Immediate Intervention',
+            subtitle: tcp.immediate_intervention.focus,
+          }}
+          hasMoreContent={tcp.post_care_instructions.length > 0}
+        >
+          <CardGroup
+            title="Treatments"
+            cards={immediateTreatments}
+            emptyText="No treatments"
+          />
+        </Section>
 
-          {tcp.immediate_intervention.treatments.length > 0 && (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Treatment</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell align="right">Cost</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {tcp.immediate_intervention.treatments.map((t, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <strong>{t.name}</strong>
-                      </TableCell>
-                      <TableCell>{t.description || '-'}</TableCell>
-                      <TableCell>{t.details || '-'}</TableCell>
-                      <TableCell align="right">{formatCurrency(t.cost)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+        {tcp.post_care_instructions.length > 0 && (
+          <SectionContinuation>
+            <ListSection
+              title="Post-care Instructions"
+              items={tcp.post_care_instructions}
+              emptyText="No post-care instructions"
+            />
+          </SectionContinuation>
+        )}
 
-          {tcp.post_care_instructions.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Post-Care Instructions
-              </Typography>
-              <List dense>
-                {tcp.post_care_instructions.map((instruction, i) => (
-                  <ListItem key={i}>
-                    <ListItemIcon>
-                      <CheckCircleIcon color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={instruction} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-        </Box>
+        {/* Short-term Goals */}
+        <Section
+          heading={{
+            title: 'Short-term Goals',
+            subtitle: tcp.short_term_goals.focus,
+          }}
+          hasMoreContent={followUpEvents.length > 0}
+        >
+          <CardGroup
+            title="Treatments"
+            cards={shortTermTreatments}
+            emptyText="No treatments"
+          />
+        </Section>
 
-        <Divider sx={{ my: 3 }} />
+        {followUpEvents.length > 0 && (
+          <SectionContinuation>
+            <Stack gap={0.5}>
+              <AIHeading title="Follow-up schedule" size="medium" />
+              <FollowUpTimeline events={followUpEvents} />
+            </Stack>
+          </SectionContinuation>
+        )}
 
-        {/* Short-Term Goals */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" color="primary" gutterBottom>
-            Short-Term Goals
-          </Typography>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            {tcp.short_term_goals.focus}
-          </Typography>
+        {/* Long-term Strategy */}
+        <Section
+          heading={{
+            title: 'Long-term Strategy',
+            subtitle: tcp.long_term_strategy.focus,
+          }}
+          hasMoreContent={tcp.long_term_strategy.skincare_routine !== null}
+        >
+          <MaintenanceTable
+            title="Maintenance schedule"
+            rows={tcp.long_term_strategy.maintenance_schedule}
+            emptyText="No maintenance schedule"
+          />
+        </Section>
 
-          {tcp.short_term_goals.treatments.length > 0 && (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Treatment</TableCell>
-                    <TableCell>Description</TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell align="right">Cost</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {tcp.short_term_goals.treatments.map((t, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <strong>{t.name}</strong>
-                      </TableCell>
-                      <TableCell>{t.description || '-'}</TableCell>
-                      <TableCell>{t.details || '-'}</TableCell>
-                      <TableCell align="right">{formatCurrency(t.cost)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-
-          {tcp.short_term_goals.follow_up_schedule.length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Follow-Up Schedule
-              </Typography>
-              <Stack spacing={1}>
-                {tcp.short_term_goals.follow_up_schedule.map((item, i) => (
-                  <Stack
-                    key={i}
-                    direction="row"
-                    spacing={2}
-                    alignItems="center"
-                    sx={{
-                      p: 1.5,
-                      bgcolor: 'grey.50',
-                      borderRadius: 1,
-                    }}
-                  >
-                    <EventIcon color="action" />
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2" fontWeight={600}>
-                        {item.event}
-                      </Typography>
-                    </Box>
-                    <Chip label={item.date} size="small" />
-                  </Stack>
-                ))}
-              </Stack>
-            </Box>
-          )}
-        </Box>
-
-        <Divider sx={{ my: 3 }} />
-
-        {/* Long-Term Strategy */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" color="primary" gutterBottom>
-            Long-Term Strategy
-          </Typography>
-          <Typography variant="subtitle1" sx={{ mb: 2 }}>
-            {tcp.long_term_strategy.focus}
-          </Typography>
-
-          {tcp.long_term_strategy.maintenance_schedule.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Maintenance Schedule
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Treatment</TableCell>
-                      <TableCell>Frequency</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tcp.long_term_strategy.maintenance_schedule.map((item, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{item.treatment}</TableCell>
-                        <TableCell>{item.frequency}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
-
-          {tcp.long_term_strategy.skincare_routine && (
-            <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Skincare Routine
-              </Typography>
-              <Stack direction="row" spacing={4}>
-                {tcp.long_term_strategy.skincare_routine.morning.length > 0 && (
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Morning
-                    </Typography>
-                    <List dense>
-                      {tcp.long_term_strategy.skincare_routine.morning.map((step, i) => (
-                        <ListItem key={i}>
-                          <ListItemText
-                            primary={`${step.step}. ${step.product}`}
-                            secondary={step.instructions}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-                {tcp.long_term_strategy.skincare_routine.evening.length > 0 && (
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      Evening
-                    </Typography>
-                    <List dense>
-                      {tcp.long_term_strategy.skincare_routine.evening.map((step, i) => (
-                        <ListItem key={i}>
-                          <ListItemText
-                            primary={`${step.step}. ${step.product}`}
-                            secondary={step.instructions}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                )}
-              </Stack>
-            </Box>
-          )}
-        </Box>
-
-        <Divider sx={{ my: 3 }} />
+        {tcp.long_term_strategy.skincare_routine && (
+          <SectionContinuation>
+            <AIHeading title="Skincare Routine" size="medium" />
+            <CardGroup
+              title="Morning"
+              cards={morningCards}
+              emptyText="No morning routine"
+            />
+            <CardGroup
+              title="Evening"
+              cards={eveningCards}
+              emptyText="No evening routine"
+            />
+          </SectionContinuation>
+        )}
 
         {/* Clinical Safety Protocols */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h5" color="primary" gutterBottom>
-            Clinical Safety Protocols
-          </Typography>
+        <Section
+          heading={{ title: 'Clinical Safety Protocols' }}
+          hasMoreContent={tcp.clinical_safety_protocols.safety_protocols.length > 0}
+        >
+          <ListSection
+            title="Coordination requirements"
+            items={tcp.clinical_safety_protocols.coordination_requirements}
+            emptyText="No coordination requirements"
+          />
+        </Section>
 
-          {tcp.clinical_safety_protocols.coordination_requirements.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Coordination Requirements
-              </Typography>
-              <List dense>
-                {tcp.clinical_safety_protocols.coordination_requirements.map((req, i) => (
-                  <ListItem key={i}>
-                    <ListItemText primary={req} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-
-          {tcp.clinical_safety_protocols.safety_protocols.length > 0 && (
-            <Box
-              sx={{
-                p: 2,
-                bgcolor: 'warning.light',
-                borderRadius: 1,
-                border: 1,
-                borderColor: 'warning.main',
-              }}
-            >
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                <WarningAmberIcon color="warning" />
-                <Typography variant="subtitle2">Important Safety Information</Typography>
-              </Stack>
-              <List dense>
-                {tcp.clinical_safety_protocols.safety_protocols.map((protocol, i) => (
-                  <ListItem key={i}>
-                    <ListItemText primary={protocol} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-          )}
-        </Box>
+        {tcp.clinical_safety_protocols.safety_protocols.length > 0 && (
+          <SectionContinuation>
+            <ListSection
+              title="Safety protocols"
+              items={tcp.clinical_safety_protocols.safety_protocols}
+              emptyText="No safety protocols"
+            />
+          </SectionContinuation>
+        )}
 
         {/* Footer */}
-        <Divider sx={{ my: 3 }} />
-        <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+        <Box sx={{ textAlign: 'center', color: 'text.secondary', pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption">
-            Generated on {new Date().toLocaleDateString()} | Document Version:{' '}
-            {document.metadata?.version || 1}
+            Generated on {new Date().toLocaleDateString()} | Version {document.metadata?.version || 1}
           </Typography>
         </Box>
-      </Paper>
+      </Stack>
     </Box>
   );
-}
+});

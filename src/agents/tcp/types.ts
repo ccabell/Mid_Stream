@@ -71,10 +71,9 @@ export interface SkincareRoutine {
 }
 
 export interface SkincareStep {
-  step: number;
   product: string;
-  instructions: string;
-  cost?: string;
+  purpose: string;
+  estimated_cost: string;
 }
 
 export interface ClinicalSafetyProtocols {

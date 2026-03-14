@@ -22,6 +22,7 @@
     "@mui/material": "^7.3.9",
     "@mui/x-charts": "^8.27.5",
     "@mui/x-date-pickers": "^8.27.2",
+    "@xyflow/react": "^12.10.1",
     "axios": "^1.13.6",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",

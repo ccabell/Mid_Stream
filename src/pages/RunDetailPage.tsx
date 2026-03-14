@@ -116,7 +116,7 @@ export function RunDetailPage() {
         </Box>
 
         {/* HITL Verification Button */}
-        {p1 && p2 && (
+        {Boolean(p1 && p2) && (
           <Button
             variant={(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'outlined' : 'contained'}
             color={(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'success' : 'primary'}
@@ -128,7 +128,7 @@ export function RunDetailPage() {
         )}
 
         {/* TCP Generation Button - only show after HITL is complete */}
-        {(run as Run & { prompt_hitl?: unknown }).prompt_hitl && (
+        {Boolean((run as Run & { prompt_hitl?: unknown }).prompt_hitl) && (
           <Button
             variant="contained"
             color="secondary"

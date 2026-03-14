@@ -33,6 +33,7 @@ import {
   ProductFormModal,
   PackageFormModal,
   ConcernFormModal,
+  ImportFromGlobalModal,
 } from 'components/practiceLibrary';
 import {
   usePracticeLibraryStore,
@@ -291,6 +292,9 @@ export function PracticeLibraryPage() {
       <ProductFormModal />
       <PackageFormModal />
       <ConcernFormModal />
+
+      {/* Import Modal */}
+      <ImportFromGlobalModal />
     </Box>
   );
 }

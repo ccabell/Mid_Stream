@@ -5,7 +5,7 @@
  * or as fallback data when the API is unavailable.
  */
 
-import type { PLService, PLProduct, PLPackage, PLConcern } from 'apiServices/practiceLibrary/types';
+import { GLOBAL_LIBRARY_ID, type PLService, type PLProduct, type PLPackage, type PLConcern } from 'apiServices/practiceLibrary/types';
 
 // ============================================
 // Global Services (5 samples)
@@ -13,7 +13,7 @@ import type { PLService, PLProduct, PLPackage, PLConcern } from 'apiServices/pra
 
 export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>[] = [
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Botox Treatment',
     description: 'Botulinum toxin injection for wrinkle reduction and facial rejuvenation. Targets dynamic wrinkles caused by muscle movement.',
@@ -30,7 +30,7 @@ export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>
     rationale_template: 'Based on your concerns about {concern}, Botox can help by relaxing the muscles that cause dynamic wrinkles.',
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Dermal Filler - Juvederm',
     description: 'Hyaluronic acid dermal filler for volume restoration and facial contouring. Ideal for lips, cheeks, and nasolabial folds.',
@@ -47,7 +47,7 @@ export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>
     rationale_template: 'Juvederm can restore lost volume and enhance your {area} for a more youthful appearance.',
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Chemical Peel - Medium Depth',
     description: 'TCA-based chemical peel for skin resurfacing. Addresses pigmentation, fine lines, and skin texture.',
@@ -64,7 +64,7 @@ export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>
     rationale_template: 'A medium-depth peel can significantly improve your skin texture and address the {concern} you mentioned.',
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Laser Hair Removal',
     description: 'Permanent hair reduction using advanced laser technology. Safe for most skin types.',
@@ -81,7 +81,7 @@ export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>
     rationale_template: 'Laser hair removal provides long-term reduction of unwanted hair in the {area} area.',
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'HydraFacial',
     description: 'Multi-step treatment combining cleansing, exfoliation, extraction, and hydration. Instant glow with no downtime.',
@@ -105,7 +105,7 @@ export const globalServices: Omit<PLService, 'id' | 'created_at' | 'updated_at'>
 
 export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>[] = [
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Botox (Allergan)',
     description: 'OnabotulinumtoxinA - FDA approved neurotoxin for cosmetic use. Industry standard for wrinkle treatment.',
@@ -117,7 +117,7 @@ export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>
     suggest_when: ['dynamic wrinkles present', 'patient requests Botox by name'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Juvederm Ultra XC',
     description: 'Hyaluronic acid filler with lidocaine. Ideal for lip augmentation and perioral lines.',
@@ -129,7 +129,7 @@ export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>
     suggest_when: ['patient wants lip enhancement', 'lip volume loss noted'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Juvederm Voluma XC',
     description: 'Hyaluronic acid filler designed for cheek augmentation and mid-face volume restoration.',
@@ -141,7 +141,7 @@ export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>
     suggest_when: ['midface volume loss', 'patient wants cheek enhancement'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Dysport',
     description: 'AbobotulinumtoxinA - Alternative neurotoxin with faster onset. Good for larger treatment areas.',
@@ -153,7 +153,7 @@ export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>
     suggest_when: ['patient prefers Dysport', 'larger treatment area needed'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     practice_name: 'Global Library',
     title: 'Restylane Lyft',
     description: 'Hyaluronic acid filler for cheeks and hands. FDA approved for hand rejuvenation.',
@@ -172,7 +172,7 @@ export const globalProducts: Omit<PLProduct, 'id' | 'created_at' | 'updated_at'>
 
 export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>[] = [
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     concern_id: 'wrinkles',
     label: 'Wrinkles & Fine Lines',
     category: 'aging',
@@ -182,7 +182,7 @@ export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>
     commonly_in_areas: ['forehead', 'around eyes', 'between brows'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     concern_id: 'volume_loss',
     label: 'Volume Loss',
     category: 'aging',
@@ -192,7 +192,7 @@ export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>
     commonly_in_areas: ['cheeks', 'temples', 'under eyes'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     concern_id: 'pigmentation',
     label: 'Pigmentation & Sun Damage',
     category: 'pigmentation',
@@ -202,7 +202,7 @@ export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>
     commonly_in_areas: ['face', 'hands', 'chest'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     concern_id: 'acne_scarring',
     label: 'Acne Scarring',
     category: 'scarring',
@@ -212,7 +212,7 @@ export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>
     commonly_in_areas: ['cheeks', 'forehead', 'chin'],
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     concern_id: 'skin_laxity',
     label: 'Skin Laxity',
     category: 'aging',
@@ -229,7 +229,7 @@ export const globalConcerns: Omit<PLConcern, 'id' | 'created_at' | 'updated_at'>
 
 export const globalPackages: Omit<PLPackage, 'id' | 'created_at' | 'updated_at'>[] = [
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     name: 'Anti-Aging Essentials',
     description: 'Complete wrinkle treatment package combining neurotoxin and filler for comprehensive facial rejuvenation.',
     total_value: 1200,
@@ -242,7 +242,7 @@ export const globalPackages: Omit<PLPackage, 'id' | 'created_at' | 'updated_at'>
     value_proposition: 'Save over $200 on our most popular anti-aging combination.',
   },
   {
-    practice_id: null,
+    practice_id: GLOBAL_LIBRARY_ID,
     name: 'Glow Package',
     description: 'Skin refresher package with HydraFacial and chemical peel for radiant, healthy skin.',
     total_value: 525,

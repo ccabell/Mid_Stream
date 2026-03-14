@@ -1,97 +1,165 @@
-import axios from 'axios';
+/**
+ * Prompts API
+ *
+ * Connects to Prompt Runner's prompt_templates and prompt_sets endpoints.
+ */
 
-// Prompts API connects to local prompt server via Vite proxy
-const promptsClient = axios.create({
-  baseURL: '/prompts-api',
-  headers: { 'Content-Type': 'application/json' },
-});
+import { client } from './client';
 
-promptsClient.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const message = err.response?.data?.error ?? err.message ?? 'Request failed';
-    return Promise.reject(new Error(typeof message === 'string' ? message : JSON.stringify(message)));
-  }
-);
+// ============================================================================
+// TYPES
+// ============================================================================
 
-export interface PromptMeta {
-  slug: string;
+export interface PromptTemplate {
+  id: string;
+  prompt_id: string;
   name: string;
-  category: string;
   description: string;
-  path: string;
-  exists: boolean;
-  lastModified: string | null;
+  version: string;
+  content?: string;
+  created_at: string;
 }
 
-export interface PromptDetail extends PromptMeta {
+export interface PromptSet {
+  id: string;
+  set_id: string;
+  name: string;
+  description: string;
+  prompt_order: string[];
+  prompt_versions: Record<string, string>;
+  created_at: string;
+}
+
+export interface PromptTemplateDetail extends PromptTemplate {
   content: string;
-  size: number;
 }
 
-export interface ScannedFile {
-  file: string;
-  title: string;
-  path: string;
-  size: number;
-  lastModified: string;
+export interface CreatePromptTemplatePayload {
+  prompt_id: string;
+  name: string;
+  description?: string;
+  version: string;
+  content: string;
 }
 
-export interface BasePaths {
-  primary: string;
-  conversational: string;
-  reach: string;
+export interface CreatePromptSetPayload {
+  set_id: string;
+  name: string;
+  description?: string;
+  prompt_order: string[];
+  prompt_versions: Record<string, string>;
 }
+
+// ============================================================================
+// API
+// ============================================================================
 
 export const promptsApi = {
-  /** List all registered prompts with metadata */
+  // =========================================================================
+  // PROMPT TEMPLATES
+  // =========================================================================
+
+  /** List all prompt templates */
+  listTemplates: () =>
+    client
+      .get<{ data: PromptTemplate[]; total: number }>('/prompt_templates')
+      .then((r) => r.data),
+
+  /** Get a single prompt template by ID */
+  getTemplate: (templateId: string) =>
+    client
+      .get<PromptTemplateDetail>(`/prompt_templates/${templateId}`)
+      .then((r) => r.data),
+
+  /** Create a new prompt template */
+  createTemplate: (payload: CreatePromptTemplatePayload) =>
+    client
+      .post<PromptTemplate>('/prompt_templates', payload)
+      .then((r) => r.data),
+
+  /** Delete a prompt template */
+  deleteTemplate: (templateId: string) =>
+    client
+      .delete(`/prompt_templates/${templateId}`)
+      .then((r) => r.data),
+
+  // =========================================================================
+  // PROMPT SETS
+  // =========================================================================
+
+  /** List all prompt sets */
+  listSets: () =>
+    client
+      .get<{ data: PromptSet[]; total: number }>('/prompt_sets')
+      .then((r) => r.data),
+
+  /** Get a single prompt set by ID */
+  getSet: (setId: string) =>
+    client
+      .get<PromptSet>(`/prompt_sets/${setId}`)
+      .then((r) => r.data),
+
+  /** Create a new prompt set */
+  createSet: (payload: CreatePromptSetPayload) =>
+    client
+      .post<PromptSet>('/prompt_sets', payload)
+      .then((r) => r.data),
+
+  // =========================================================================
+  // LEGACY ALIASES (for backward compatibility with old Prompt Manager)
+  // =========================================================================
+
+  /** @deprecated Use listTemplates instead */
   list: () =>
-    promptsClient
-      .get<{ prompts: PromptMeta[]; basePaths: BasePaths }>('/prompts')
-      .then((r) => r.data),
+    client
+      .get<{ data: PromptTemplate[]; total: number }>('/prompt_templates')
+      .then((r) => ({
+        prompts: r.data.data.map((t) => ({
+          slug: t.id,
+          name: t.name,
+          category: t.prompt_id,
+          description: t.description,
+          path: '',
+          exists: true,
+          lastModified: t.created_at,
+        })),
+        basePaths: {
+          primary: '',
+          conversational: '',
+          reach: '',
+        },
+      })),
 
-  /** Get a single prompt by slug with full content */
+  /** @deprecated Use getTemplate instead */
   getBySlug: (slug: string) =>
-    promptsClient.get<PromptDetail>(`/prompts/${slug}`).then((r) => r.data),
+    client.get<PromptTemplateDetail>(`/prompt_templates/${slug}`).then((r) => ({
+      slug: r.data.id,
+      name: r.data.name,
+      category: r.data.prompt_id,
+      description: r.data.description,
+      path: '',
+      exists: true,
+      lastModified: r.data.created_at,
+      content: r.data.content || '',
+      size: r.data.content?.length || 0,
+    })),
 
-  /** Update a prompt's content */
-  update: (slug: string, content: string) =>
-    promptsClient
-      .put<PromptDetail>(`/prompts/${slug}`, { content })
-      .then((r) => r.data),
+  /** @deprecated Not supported in database-backed system */
+  update: (_slug: string, _content: string) =>
+    Promise.reject(new Error('Prompt editing not yet supported. Use Prompt Runner to manage templates.')),
 
-  /** Revert a prompt to its backup */
-  revert: (slug: string) =>
-    promptsClient
-      .post<{ message: string; slug: string }>(`/prompts/${slug}/revert`)
-      .then((r) => r.data),
+  /** @deprecated Not supported in database-backed system */
+  revert: (_slug: string) =>
+    Promise.reject(new Error('Prompt revert not supported in database-backed system.')),
 
-  /** Scan a directory for additional prompt files */
-  scan: (directory: string) =>
-    promptsClient
-      .post<{ directory: string; files: ScannedFile[] }>('/prompts/scan', { directory })
-      .then((r) => r.data),
+  /** @deprecated Not supported in database-backed system */
+  scan: (_directory: string) =>
+    Promise.reject(new Error('Directory scanning not supported. Prompts are stored in database.')),
 
-  /** Read any file by path */
-  readFile: (path: string) =>
-    promptsClient
-      .get<{ path: string; content: string; lastModified: string; size: number }>('/prompts/file', {
-        params: { path },
-      })
-      .then((r) => r.data),
-
-  /** Write any file by path */
-  writeFile: (path: string, content: string) =>
-    promptsClient
-      .put<{ path: string; lastModified: string; size: number; message: string }>('/prompts/file', {
-        path,
-        content,
-      })
-      .then((r) => r.data),
-
-  /** Health check */
+  /** Health check - just verify API is reachable */
   health: () =>
-    promptsClient
-      .get<{ status: string; timestamp: string }>('/health')
-      .then((r) => r.data),
+    client
+      .get<{ data: PromptTemplate[] }>('/prompt_templates')
+      .then(() => ({ status: 'ok', timestamp: new Date().toISOString() }))
+      .catch(() => ({ status: 'error', timestamp: new Date().toISOString() })),
 };

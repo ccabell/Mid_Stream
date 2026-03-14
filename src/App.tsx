@@ -17,6 +17,7 @@ import {
   PracticeLibraryPage,
   PromptManagerPage,
   TCPPage,
+  IntegrationsPage,
 } from 'pages';
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
             <Route path={ROUTES.PROMPTS} element={<PromptManagerPage />} />
             <Route path={ROUTES.TCP} element={<TCPPage />} />
             <Route path={ROUTES.TCP_FROM_RUN} element={<TCPPage />} />
+            <Route path={ROUTES.INTEGRATIONS} element={<IntegrationsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -19,7 +19,7 @@ import { runsApi } from 'apiServices';
 import type { Run } from 'apiServices/types';
 import type { ExtractionOutput } from 'agents/types';
 import { HITLPage } from 'agents/hitl';
-import { runDetailPath } from 'constants/routes';
+import { runDetailPath, tcpPath } from 'constants/routes';
 
 export function HITLVerificationPage() {
   const { runId } = useParams<{ runId: string }>();
@@ -48,9 +48,9 @@ export function HITLVerificationPage() {
   }, [runId]);
 
   const handleComplete = () => {
-    // Navigate back to run detail after completion
+    // Navigate to TCP generation after HITL completion
     if (runId) {
-      navigate(runDetailPath(runId));
+      navigate(tcpPath(runId));
     }
   };
 

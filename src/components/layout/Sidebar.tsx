@@ -16,6 +16,7 @@ import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import SyncIcon from '@mui/icons-material/CloudSync';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ROUTES } from 'constants/routes';
@@ -36,6 +37,7 @@ const navItems = [
   { label: 'Opportunities', path: ROUTES.OPPORTUNITIES, icon: <LightbulbIcon /> },
   { label: 'Agents', path: ROUTES.AGENTS, icon: <SmartToyIcon /> },
   { label: 'Library', path: ROUTES.PRACTICE_LIBRARY, icon: <LibraryBooksIcon /> },
+  { label: 'Integrations', path: ROUTES.INTEGRATIONS, icon: <SyncIcon /> },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

@@ -126,6 +126,18 @@ export function RunDetailPage() {
             {(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'View HITL Verification' : 'Start HITL Verification'}
           </Button>
         )}
+
+        {/* TCP Generation Button - only show after HITL is complete */}
+        {(run as Run & { prompt_hitl?: unknown }).prompt_hitl && (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<DescriptionIcon />}
+            onClick={() => navigate(tcpPath(runId!))}
+          >
+            Generate TCP
+          </Button>
+        )}
       </Box>
 
       {/* Summary Card */}

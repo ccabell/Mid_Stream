@@ -14,6 +14,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ROUTES } from 'constants/routes';
@@ -32,6 +33,7 @@ const navItems = [
   { label: 'Runs', path: ROUTES.RUNS, icon: <PlaylistPlayIcon /> },
   { label: 'Opportunities', path: ROUTES.OPPORTUNITIES, icon: <LightbulbIcon /> },
   { label: 'Agents', path: ROUTES.AGENTS, icon: <SmartToyIcon /> },
+  { label: 'Library', path: ROUTES.PRACTICE_LIBRARY, icon: <LibraryBooksIcon /> },
 ];
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {

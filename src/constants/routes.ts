@@ -7,6 +7,7 @@ export const ROUTES = {
   CONSULTATION_DETAIL: '/consultations/:runId',
   OPPORTUNITIES: '/opportunities',
   AGENTS: '/agents',
+  PRACTICE_LIBRARY: '/practice-library',
 } as const;
 
 export const runDetailPath = (runId: string) => `/runs/${runId}`;

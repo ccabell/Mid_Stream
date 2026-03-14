@@ -13,6 +13,7 @@ import {
   RunDetailPage,
   OpportunitiesPage,
   AgentsPage,
+  PracticeLibraryPage,
 } from 'pages';
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
             <Route path={ROUTES.RUN_DETAIL} element={<RunDetailPage />} />
             <Route path={ROUTES.OPPORTUNITIES} element={<OpportunitiesPage />} />
             <Route path={ROUTES.AGENTS} element={<AgentsPage />} />
+            <Route path={ROUTES.PRACTICE_LIBRARY} element={<PracticeLibraryPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
@@ -11,14 +9,32 @@ import Breadcrumbs from '@mui/material/Breadcrumbs';
 import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
+import Grid from '@mui/material/Grid';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import DescriptionIcon from '@mui/icons-material/Description';
+import SummarizeIcon from '@mui/icons-material/Summarize';
+import PersonIcon from '@mui/icons-material/Person';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ChecklistIcon from '@mui/icons-material/Checklist';
+import WarningIcon from '@mui/icons-material/Warning';
 import { runsApi, agentsApi } from 'apiServices';
 import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult } from 'apiServices';
 import { ROUTES, runHitlPath, tcpPath } from 'constants/routes';
+import {
+  SummaryCard,
+  AccordionCard,
+  InsightCard,
+  KPICard,
+  OfferingList,
+} from 'components/cards';
 
 export function RunDetailPage() {
   const { runId } = useParams<{ runId: string }>();

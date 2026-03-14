@@ -202,65 +202,59 @@ export function useHITLState() {
   /**
    * Initialize from API analysis (recommended)
    * Calls the HITL analyze endpoint which uses AI + practice library
+   * Throws error if API call fails (caller should handle fallback)
    */
   const initFromApi = useCallback(async (
     runId: string,
     practiceId?: string
-  ) => {
+  ): Promise<void> => {
     setState(prev => ({ ...prev, loading: true, error: null }));
     contextRef.current = { runId, practiceId };
 
-    try {
-      const response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
+    const response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
 
-      // Check if the API returned a success flag
-      if ('success' in response && !response.success) {
-        const errorMsg = (response as { parse_error?: string }).parse_error || 'Analysis failed';
-        throw new Error(errorMsg);
-      }
-
-      const draft = transformApiDraftToLocal(response.draft);
-
-      // Recalculate checklist stats
-      const completedCount = draft.checklist.items.filter(i => i.completed === true).length;
-      draft.checklist.completionRate = draft.checklist.items.length > 0
-        ? completedCount / draft.checklist.items.length
-        : 1;
-      draft.checklist.criticalItemsComplete = draft.checklist.items
-        .filter(i => i.critical)
-        .every(i => i.completed === true);
-
-      // Initialize with version info from API response (if available)
-      const versionInfo: VersionInfo = {
-        version: (response as { version?: number }).version ?? 1,
-        lastModified: new Date().toISOString(),
-        lastModifiedBy: 'system',
-      };
-
-      setState({
-        currentStep: 'patient_summary',
-        loading: false,
-        error: null,
-        draft,
-        isDirty: false,
-        validationErrors: [],
-        // Production patterns
-        versionInfo,
-        editHistory: [],
-        currentExpert: null,
-        clinicalReviewRequired: true,
-        clinicalReviewCompleted: false,
-        clinicalReviewedBy: null,
-        clinicalReviewedAt: null,
-        conflictState: null,
-      });
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: error instanceof Error ? error.message : 'Failed to analyze extraction',
-      }));
+    // Check if the API returned a success flag
+    if ('success' in response && !response.success) {
+      const errorMsg = (response as { parse_error?: string }).parse_error || 'Analysis failed';
+      setState(prev => ({ ...prev, loading: false }));
+      throw new Error(errorMsg);
     }
+
+    const draft = transformApiDraftToLocal(response.draft);
+
+    // Recalculate checklist stats
+    const completedCount = draft.checklist.items.filter(i => i.completed === true).length;
+    draft.checklist.completionRate = draft.checklist.items.length > 0
+      ? completedCount / draft.checklist.items.length
+      : 1;
+    draft.checklist.criticalItemsComplete = draft.checklist.items
+      .filter(i => i.critical)
+      .every(i => i.completed === true);
+
+    // Initialize with version info from API response (if available)
+    const versionInfo: VersionInfo = {
+      version: (response as { version?: number }).version ?? 1,
+      lastModified: new Date().toISOString(),
+      lastModifiedBy: 'system',
+    };
+
+    setState({
+      currentStep: 'patient_summary',
+      loading: false,
+      error: null,
+      draft,
+      isDirty: false,
+      validationErrors: [],
+      // Production patterns
+      versionInfo,
+      editHistory: [],
+      currentExpert: null,
+      clinicalReviewRequired: true,
+      clinicalReviewCompleted: false,
+      clinicalReviewedBy: null,
+      clinicalReviewedAt: null,
+      conflictState: null,
+    });
   }, []);
 
   /**

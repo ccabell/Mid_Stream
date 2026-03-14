@@ -61,15 +61,25 @@ export function HITLPage({
 
   // Initialize HITL state
   // Prefer API-based initialization when runId is available (AI + practice library)
-  // Fall back to client-side extraction when runId is not available
+  // Fall back to client-side extraction when API fails or runId is not available
   useEffect(() => {
-    if (runId) {
-      // Use API-based analysis (recommended) - practiceId is optional
-      actions.initFromApi(runId, practiceId);
-    } else if (extractionOutput) {
-      // Fallback to client-side transformation
-      actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
-    }
+    const initialize = async () => {
+      if (runId && extractionOutput) {
+        try {
+          // Try API-based analysis first
+          await actions.initFromApi(runId, practiceId);
+        } catch (error) {
+          // If API fails, fall back to client-side transformation
+          console.warn('HITL API unavailable, using client-side extraction:', error);
+          actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
+        }
+      } else if (extractionOutput) {
+        // No runId - use client-side transformation directly
+        actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
+      }
+    };
+
+    initialize();
   }, [runId, extractionOutput, practiceId, actions]);
 
   const currentStepIndex = useMemo(() => {

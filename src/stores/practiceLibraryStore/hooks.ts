@@ -8,6 +8,7 @@ import { useCallback, useEffect } from 'react';
 import { usePracticeLibraryStore } from './store';
 import * as selectors from './selectors';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
+import { getApiPracticeId, GLOBAL_LIBRARY_ID } from 'apiServices/practiceLibrary/types';
 import type { LibraryTab } from './types';
 
 /**
@@ -69,7 +70,7 @@ export const usePractices = () => {
 };
 
 /**
- * Hook to load services for selected practice
+ * Hook to load services for selected practice or global library
  */
 export const useServices = () => {
   const services = usePracticeLibraryStore(selectors.selectServices);
@@ -80,13 +81,17 @@ export const useServices = () => {
 
   const loadServices = useCallback(
     async (signal?: AbortSignal) => {
+      // Allow loading for both practices and global library
       if (!practiceId) return;
 
       setIsLoadingServices(true);
       try {
+        // Convert practiceId for API (global library uses null)
+        const apiPracticeId = getApiPracticeId(practiceId);
+
         const data = await practiceLibraryApi.getPLServices(
           {
-            practice_id: practiceId,
+            practice_id: apiPracticeId ?? undefined,
             search: filters.search || undefined,
             is_active: filters.is_active ?? undefined,
             is_preferred: filters.is_preferred ?? undefined,
@@ -110,7 +115,7 @@ export const useServices = () => {
 };
 
 /**
- * Hook to load products for selected practice
+ * Hook to load products for selected practice or global library
  */
 export const useProducts = () => {
   const products = usePracticeLibraryStore(selectors.selectProducts);
@@ -125,9 +130,11 @@ export const useProducts = () => {
 
       setIsLoadingProducts(true);
       try {
+        const apiPracticeId = getApiPracticeId(practiceId);
+
         const data = await practiceLibraryApi.getPLProducts(
           {
-            practice_id: practiceId,
+            practice_id: apiPracticeId ?? undefined,
             search: filters.search || undefined,
             is_active: filters.is_active ?? undefined,
             is_preferred: filters.is_preferred ?? undefined,
@@ -151,7 +158,7 @@ export const useProducts = () => {
 };
 
 /**
- * Hook to load packages for selected practice
+ * Hook to load packages for selected practice or global library
  */
 export const usePackages = () => {
   const packages = usePracticeLibraryStore(selectors.selectPackages);
@@ -165,8 +172,10 @@ export const usePackages = () => {
 
       setIsLoadingPackages(true);
       try {
+        const apiPracticeId = getApiPracticeId(practiceId);
+
         const data = await practiceLibraryApi.getPLPackages(
-          { practice_id: practiceId },
+          { practice_id: apiPracticeId ?? undefined },
           signal
         );
         setPackages(data);
@@ -185,7 +194,7 @@ export const usePackages = () => {
 };
 
 /**
- * Hook to load concerns for selected practice
+ * Hook to load concerns for selected practice or global library
  */
 export const useConcerns = () => {
   const concerns = usePracticeLibraryStore(selectors.selectConcerns);
@@ -199,8 +208,10 @@ export const useConcerns = () => {
 
       setIsLoadingConcerns(true);
       try {
+        const apiPracticeId = getApiPracticeId(practiceId);
+
         const data = await practiceLibraryApi.getPLConcerns(
-          { practice_id: practiceId },
+          { practice_id: apiPracticeId ?? undefined },
           signal
         );
         setConcerns(data);

@@ -104,13 +104,27 @@ export function RunDetailPage() {
       </Breadcrumbs>
 
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Typography variant="h5">Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
-        <Chip
-          label={run.status || 'Unknown'}
-          color={run.status === 'success' || run.status === 'completed' ? 'success' : 'default'}
-          size="small"
-        />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h5">Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
+          <Chip
+            label={run.status || 'Unknown'}
+            color={run.status === 'success' || run.status === 'completed' ? 'success' : 'default'}
+            size="small"
+          />
+        </Box>
+
+        {/* HITL Verification Button */}
+        {p1 && p2 && (
+          <Button
+            variant={(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'outlined' : 'contained'}
+            color={(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'success' : 'primary'}
+            startIcon={(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? <CheckCircleIcon /> : <FactCheckIcon />}
+            onClick={() => navigate(runHitlPath(runId!))}
+          >
+            {(run as Run & { prompt_hitl?: unknown }).prompt_hitl ? 'View HITL Verification' : 'Start HITL Verification'}
+          </Button>
+        )}
       </Box>
 
       {/* Summary Card */}

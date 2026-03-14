@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Fix PromptTestResult type issue
 /**
  * TestRunner Component
  *
@@ -115,7 +113,7 @@ export function TestRunner({ variables, isOpen, onClose }: TestRunnerProps) {
     }
   }, [selectedPrompt, editedContent, variables, selectedModel, addTestResult, setIsRunningTest]);
 
-  const latestResult = testResults[0];
+  const latestResult = testResults.length > 0 ? testResults[0] : undefined;
 
   if (!isOpen) return null;
 
@@ -208,10 +206,10 @@ export function TestRunner({ variables, isOpen, onClose }: TestRunnerProps) {
               Click "Run Test" to execute the prompt with the provided variables
             </Typography>
           </Box>
-        ) : (
+        ) : latestResult ? (
           <Box>
             {/* Latest Result */}
-            <TestResultCard result={latestResult} expanded defaultExpanded />
+            <TestResultCard result={latestResult} defaultExpanded />
 
             {/* History */}
             {testResults.length > 1 && (
@@ -219,13 +217,13 @@ export function TestRunner({ variables, isOpen, onClose }: TestRunnerProps) {
                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                   Previous Results
                 </Typography>
-                {testResults.slice(1).map((result, index) => (
+                {testResults.slice(1).map((result) => (
                   <TestResultCard key={result.timestamp} result={result} />
                 ))}
               </Box>
             )}
           </Box>
-        )}
+        ) : null}
       </Box>
     </Paper>
   );

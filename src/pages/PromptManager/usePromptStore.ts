@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Fix optional property type issues
 /**
  * Prompt Manager Store
  *
@@ -415,7 +413,12 @@ export const usePromptsByCategory = () => {
 // Helper functions
 function incrementVersion(version: string): string {
   const parts = version.split('.').map(Number);
-  parts[2] += 1; // Increment patch
+  // Ensure we have at least 3 parts for semver
+  while (parts.length < 3) {
+    parts.push(0);
+  }
+  const patch = parts[2] ?? 0;
+  parts[2] = patch + 1;
   return parts.join('.');
 }
 
@@ -429,7 +432,10 @@ export function extractVariables(content: string): PromptVariable[] {
 
   while ((match = regex.exec(content)) !== null) {
     const name = match[1];
-    const type = (match[2] as PromptVariable['type']) || 'string';
+    const typeStr = match[2];
+    if (!name) continue;
+
+    const type: PromptVariable['type'] = (typeStr as PromptVariable['type']) || 'string';
 
     if (!seen.has(name)) {
       seen.add(name);
@@ -446,7 +452,7 @@ export function extractVariables(content: string): PromptVariable[] {
   const altRegex = /[{<](\w+)[}>]/g;
   while ((match = altRegex.exec(content)) !== null) {
     const name = match[1];
-    if (!seen.has(name) && name.length > 2) {
+    if (name && !seen.has(name) && name.length > 2) {
       seen.add(name);
       variables.push({
         name,

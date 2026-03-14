@@ -62,12 +62,12 @@ export function HITLPage({
   // Prefer API-based initialization when runId is available (AI + practice library)
   // Fall back to client-side extraction when runId is not available
   useEffect(() => {
-    if (runId && practiceId) {
-      // Use API-based analysis (recommended)
+    if (runId) {
+      // Use API-based analysis (recommended) - practiceId is optional
       actions.initFromApi(runId, practiceId);
-    } else if (extractionOutput && practiceId) {
+    } else if (extractionOutput) {
       // Fallback to client-side transformation
-      actions.initFromExtraction(extractionOutput, practiceId, runId);
+      actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
     }
   }, [runId, extractionOutput, practiceId, actions]);
 

@@ -145,7 +145,7 @@ export const promptsApi = {
     })),
 
   /** @deprecated Not supported in database-backed system */
-  update: (_slug: string, _content: string) =>
+  update: (_slug: string, _content: string): Promise<{ content: string; lastModified: string }> =>
     Promise.reject(new Error('Prompt editing not yet supported. Use Prompt Runner to manage templates.')),
 
   /** @deprecated Not supported in database-backed system */

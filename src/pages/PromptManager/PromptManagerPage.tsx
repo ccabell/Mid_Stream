@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Fix prompts[0] possibly undefined issue
 /**
  * PromptManagerPage
  *
@@ -82,8 +80,9 @@ export function PromptManagerPage() {
       await loadPromptsFromServer();
       // Auto-select first prompt after loading
       const state = usePromptStore.getState();
-      if (state.prompts.length > 0 && !state.selectedPromptId) {
-        selectPrompt(state.prompts[0].id);
+      const firstPrompt = state.prompts[0];
+      if (firstPrompt && !state.selectedPromptId) {
+        selectPrompt(firstPrompt.id);
       }
     } catch {
       setServerStatus('disconnected');

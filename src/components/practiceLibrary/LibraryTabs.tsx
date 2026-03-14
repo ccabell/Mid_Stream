@@ -1,11 +1,10 @@
-// @ts-nocheck
-// TODO: Fix MUI Tab icon type issue
 /**
  * Library Tabs Component
  *
  * Tab navigation for Services, Products, Packages, Concerns
  */
 
+import type { ReactElement } from 'react';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Badge from '@mui/material/Badge';
@@ -16,7 +15,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import type { LibraryTab } from 'stores/practiceLibraryStore/types';
 
-const TABS: { value: LibraryTab; label: string; icon: React.ReactNode }[] = [
+const TABS: { value: LibraryTab; label: string; icon: ReactElement }[] = [
   { value: 'services', label: 'Services', icon: <MedicalServicesIcon /> },
   { value: 'products', label: 'Products', icon: <InventoryIcon /> },
   { value: 'packages', label: 'Packages', icon: <CardGiftcardIcon /> },

@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// @ts-nocheck
 /**
  * TCP State Hook
  *
  * Manages the complete state for the TCP generation workflow.
- * TODO: Fix type mismatches between state and TCPDocument structure
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
@@ -24,6 +21,7 @@ import type {
   LongTermStrategy,
   ClinicalSafetyProtocols,
 } from '../types';
+import type { HITLVerifiedOutput } from '../../types';
 import { runsApi } from '../../../apiServices/runs.api';
 
 const INITIAL_STATE: TCPState = {
@@ -613,12 +611,16 @@ export function useTCPState() {
 
   const nextStep = useCallback(() => {
     setState(prev => {
-      const steps = prev.mode === 'manual'
+      const steps: TCPStep[] = prev.mode === 'manual'
         ? ['patient_info', 'immediate', 'short_term', 'long_term', 'safety', 'review', 'preview']
         : ['review', 'preview'];
       const currentIndex = steps.indexOf(prev.currentStep);
-      if (currentIndex < steps.length - 1) {
-        return { ...prev, currentStep: steps[currentIndex + 1] as TCPStep };
+      const nextIdx = currentIndex + 1;
+      if (currentIndex >= 0 && nextIdx < steps.length) {
+        const nextStepValue = steps[nextIdx];
+        if (nextStepValue) {
+          return { ...prev, currentStep: nextStepValue };
+        }
       }
       return prev;
     });
@@ -626,12 +628,16 @@ export function useTCPState() {
 
   const prevStep = useCallback(() => {
     setState(prev => {
-      const steps = prev.mode === 'manual'
+      const steps: TCPStep[] = prev.mode === 'manual'
         ? ['patient_info', 'immediate', 'short_term', 'long_term', 'safety', 'review', 'preview']
         : ['review', 'preview'];
       const currentIndex = steps.indexOf(prev.currentStep);
-      if (currentIndex > 0) {
-        return { ...prev, currentStep: steps[currentIndex - 1] as TCPStep };
+      const prevIdx = currentIndex - 1;
+      if (prevIdx >= 0) {
+        const prevStepValue = steps[prevIdx];
+        if (prevStepValue) {
+          return { ...prev, currentStep: prevStepValue };
+        }
       }
       return prev;
     });
@@ -802,32 +808,19 @@ export function useTCPState() {
 /**
  * Transform HITL verified output to TCP document
  */
-function transformHITLToTCP(hitl: Record<string, unknown>): TCPDocument {
+function transformHITLToTCP(hitl: HITLVerifiedOutput): TCPDocument {
   const now = new Date();
-  const hitlData = hitl as {
-    patient_summary?: { primary_concern?: { value?: string }; patient_name?: string };
-    todays_treatments?: Array<{
-      id?: string;
-      name: string;
-      details?: string;
-      area?: string;
-      cost?: string;
-    }>;
-    recommendations?: Array<{
-      id?: string;
-      name: string;
-      rationale: string;
-      action?: string;
-    }>;
-  };
+
+  // Get date in YYYY-MM-DD format
+  const dateStr = now.toISOString().slice(0, 10);
 
   return {
-    patient: hitlData.patient_summary?.patient_name || 'Patient',
-    consultation_date: now.toISOString().split('T')[0] || now.toISOString().slice(0, 10),
+    patient: hitl.verified_by ?? 'Patient',
+    consultation_date: dateStr,
     treatment_care_plan: {
       immediate_intervention: {
-        focus: hitlData.patient_summary?.primary_concern?.value || 'Address primary concerns',
-        treatments: (hitlData.todays_treatments || []).map(t => ({
+        focus: hitl.patient_summary.primary_concern.value || 'Address primary concerns',
+        treatments: hitl.todays_treatments.map(t => ({
           id: t.id,
           name: t.name,
           description: t.details || '',
@@ -841,7 +834,7 @@ function transformHITLToTCP(hitl: Record<string, unknown>): TCPDocument {
       ],
       short_term_goals: {
         focus: 'Optimize results from today\'s treatment',
-        treatments: (hitlData.recommendations || [])
+        treatments: hitl.recommendations
           .filter(r => r.action === 'include')
           .map(r => ({
             id: r.id,
@@ -856,7 +849,7 @@ function transformHITLToTCP(hitl: Record<string, unknown>): TCPDocument {
       },
       long_term_strategy: {
         focus: 'Maintain and enhance results',
-        maintenance_schedule: (hitlData.recommendations || [])
+        maintenance_schedule: hitl.recommendations
           .filter(r => r.action === 'future')
           .map(r => ({
             treatment: r.name,

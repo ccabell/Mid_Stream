@@ -1,5 +1,3 @@
-// @ts-nocheck
-// TODO: Fix type mismatches between Run types
 /**
  * HITL Verification Page
  *
@@ -17,7 +15,7 @@ import Button from '@mui/material/Button';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { runsApi } from 'apiServices';
 import type { Run } from 'apiServices/types';
-import type { ExtractionOutput } from 'agents/types';
+import type { ExtractionOutput, Pass1Output, Pass2Output } from 'agents/types';
 import { HITLPage } from 'agents/hitl';
 import { runDetailPath, tcpPath } from 'constants/routes';
 
@@ -115,22 +113,31 @@ export function HITLVerificationPage() {
   }
 
   // Build extraction output from run data
+  // Safe to access since we checked hasExtraction above
+  const p1 = run.outputs!.prompt_1!;
+  const p2 = run.outputs!.prompt_2!;
+
+  // Cast V2 types to Pass1Output/Pass2Output - they have compatible runtime structure
+  // but different TypeScript definitions (V2 has optional fields, Pass types are strict)
   const extractionOutput: ExtractionOutput = {
     prompt_1: {
-      parsed_json: run.outputs.prompt_1.parsed_json,
-      raw_response: run.outputs.prompt_1.raw_text,
+      parsed_json: p1.parsed_json as Pass1Output,
+      raw_response: p1.raw ?? '',
     },
     prompt_2: {
-      parsed_json: run.outputs.prompt_2.parsed_json,
-      raw_response: run.outputs.prompt_2.raw_text,
+      parsed_json: p2.parsed_json as Pass2Output,
+      raw_response: p2.raw ?? '',
     },
   };
+
+  // practice_id may be string, null, or undefined due to Run's index signature
+  const practiceId = typeof run.practice_id === 'string' ? run.practice_id : undefined;
 
   return (
     <HITLPage
       runId={runId}
       extractionOutput={extractionOutput}
-      practiceId={run.practice_id}
+      practiceId={practiceId}
       onComplete={handleComplete}
       onCancel={handleCancel}
     />

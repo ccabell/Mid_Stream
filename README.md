@@ -1,73 +1,84 @@
-# React + TypeScript + Vite
+# Mid_Stream
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Unified Intelligence Extraction Frontend for A360**
 
-Currently, two official plugins are available:
+Mid_Stream is the central hub for viewing, managing, and interacting with consultation intelligence data extracted by the Prompt Runner backend.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start
 
-## React Compiler
+```bash
+# Install dependencies
+npm install
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Start development server
+npm run dev
 
-## Expanding the ESLint configuration
+# Build for production
+npm run build
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Deploy to Vercel
+npx vercel --prod --yes
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Live Deployment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Production:** https://mid-stream.vercel.app
+- **Backend API:** https://prompt-runner-production.up.railway.app (DO NOT MODIFY)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Features
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Dashboard** | KPI overview with charts | Complete |
+| **Runs** | List all extraction runs | Complete |
+| **Run Detail** | View extraction outputs + run agents | Complete |
+| **Opportunities** | Kanban board for follow-up tracking | Complete |
+| **Agents** | List available downstream agents | Complete |
+| **HITL Verification** | Provider review/approval screen | Planned |
+| **Practice Library** | View/edit practice configurations | Planned |
+
+## Architecture
+
 ```
+Mid_Stream (React/Vercel)
+    │
+    │ /api/* → rewritten to backend
+    ▼
+Prompt Runner (FastAPI/Railway)
+    │
+    ▼
+Supabase (PostgreSQL)
+```
+
+## Documentation
+
+- [Project Hub](docs/PROJECT_HUB.md) - Complete project overview and inventory
+- [HITL-TCP Requirements](../HITL-TCP-Project/) - Feature requirements and schemas
+
+## Key Files
+
+```
+src/
+├── api/           # API client and typed endpoints
+├── components/    # Reusable UI components
+├── pages/         # Route pages
+├── theme/         # MUI v7 theme (A360 design system)
+└── constants/     # Routes and configuration
+```
+
+## Environment
+
+Local development uses Vite proxy. Production uses Vercel rewrites defined in `vercel.json`.
+
+## Related Projects
+
+| Project | Purpose | Touch? |
+|---------|---------|--------|
+| Prompt Runner | Backend API | NO |
+| HITL-TCP-Project | Requirements/docs | Reference |
+| Coaching | Legacy (merged) | Archived |
+| ie-interface | Legacy (superseded) | Archived |
+
+---
+
+*Part of the A360 Intelligence Extraction ecosystem*

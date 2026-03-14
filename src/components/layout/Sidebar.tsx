@@ -9,6 +9,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
+import HomeIcon from '@mui/icons-material/Home';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
@@ -26,6 +27,7 @@ interface SidebarProps {
 }
 
 const navItems = [
+  { label: 'Hub', path: ROUTES.HUB, icon: <HomeIcon /> },
   { label: 'Dashboard', path: ROUTES.DASHBOARD, icon: <DashboardIcon /> },
   { label: 'Runs', path: ROUTES.RUNS, icon: <PlaylistPlayIcon /> },
   { label: 'Opportunities', path: ROUTES.OPPORTUNITIES, icon: <LightbulbIcon /> },
@@ -37,7 +39,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const navigate = useNavigate();
 
   const isActive = (path: string) => {
-    if (path === ROUTES.DASHBOARD) return location.pathname === '/' || location.pathname === ROUTES.DASHBOARD;
+    if (path === ROUTES.HUB) return location.pathname === '/' || location.pathname === ROUTES.HUB;
     return location.pathname.startsWith(path);
   };
 

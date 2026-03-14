@@ -1,5 +1,6 @@
 export const ROUTES = {
   HOME: '/',
+  HUB: '/hub',
   DASHBOARD: '/dashboard',
   RUNS: '/runs',
   RUN_DETAIL: '/runs/:runId',

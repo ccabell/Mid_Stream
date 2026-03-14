@@ -1,3 +1,4 @@
+export { HubPage } from './HubPage';
 export { DashboardPage } from './DashboardPage';
 export { RunsPage } from './RunsPage';
 export { RunDetailPage } from './RunDetailPage';

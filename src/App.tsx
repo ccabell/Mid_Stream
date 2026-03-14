@@ -7,6 +7,7 @@ import { theme } from '@/theme';
 import { AppLayout } from '@/components/layout';
 import { ROUTES } from '@/constants/routes';
 import {
+  HubPage,
   DashboardPage,
   RunsPage,
   RunDetailPage,
@@ -21,7 +22,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route index element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+            <Route index element={<Navigate to={ROUTES.HUB} replace />} />
+            <Route path={ROUTES.HUB} element={<HubPage />} />
             <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
             <Route path={ROUTES.RUNS} element={<RunsPage />} />
             <Route path={ROUTES.RUN_DETAIL} element={<RunDetailPage />} />

@@ -32,6 +32,9 @@ const initialState: PracticeLibraryState = {
   selectedPractice: null,
   practices: [],
 
+  // Library mode
+  libraryMode: 'practice',
+
   // Active tab
   activeTab: 'services',
 
@@ -82,6 +85,15 @@ export const usePracticeLibraryStore = createTypedStore<PracticeLibraryStore, Pr
         set((state) => {
           state.selectedPractice = practice;
           state.selectedPracticeId = practice?.id ?? null;
+          // Auto-set library mode based on practice
+          state.libraryMode = practice?.is_global ? 'global' : 'practice';
+        });
+      },
+
+      // Library mode
+      setLibraryMode: (mode) => {
+        set((state) => {
+          state.libraryMode = mode;
         });
       },
 

@@ -11,6 +11,8 @@ import type {
   Practice,
 } from 'apiServices/practiceLibrary/types';
 
+export type LibraryMode = 'global' | 'practice';
+
 export type LibraryTab = 'services' | 'products' | 'packages' | 'concerns';
 
 export type PLServicesData = ListOfItems<PLService>;
@@ -30,6 +32,9 @@ export interface PracticeLibraryState {
   selectedPracticeId: string | null;
   selectedPractice: Practice | null;
   practices: Practice[];
+
+  // Library mode (global vs practice-specific)
+  libraryMode: LibraryMode;
 
   // Active tab
   activeTab: LibraryTab;
@@ -67,6 +72,9 @@ export interface PracticeLibraryActions {
   setPractices: (practices: Practice[]) => void;
   setSelectedPracticeId: (id: string | null) => void;
   setSelectedPractice: (practice: Practice | null) => void;
+
+  // Library mode
+  setLibraryMode: (mode: LibraryMode) => void;
 
   // Tab
   setActiveTab: (tab: LibraryTab) => void;

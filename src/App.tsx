@@ -11,6 +11,7 @@ import {
   DashboardPage,
   RunsPage,
   RunDetailPage,
+  HITLVerificationPage,
   OpportunitiesPage,
   AgentsPage,
   PracticeLibraryPage,
@@ -28,6 +29,7 @@ export default function App() {
             <Route path={ROUTES.HUB} element={<HubPage />} />
             <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
             <Route path={ROUTES.RUNS} element={<RunsPage />} />
+            <Route path={ROUTES.RUN_HITL} element={<HITLVerificationPage />} />
             <Route path={ROUTES.RUN_DETAIL} element={<RunDetailPage />} />
             <Route path={ROUTES.OPPORTUNITIES} element={<OpportunitiesPage />} />
             <Route path={ROUTES.AGENTS} element={<AgentsPage />} />

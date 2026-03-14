@@ -12,6 +12,10 @@ export const selectSelectedPracticeId = (state: PracticeLibraryStore) => state.s
 export const selectSelectedPractice = (state: PracticeLibraryStore) => state.selectedPractice;
 export const selectIsLoadingPractices = (state: PracticeLibraryStore) => state.isLoadingPractices;
 
+// Library mode selectors
+export const selectLibraryMode = (state: PracticeLibraryStore) => state.libraryMode;
+export const selectIsGlobalLibraryMode = (state: PracticeLibraryStore) => state.libraryMode === 'global';
+
 // Tab selector
 export const selectActiveTab = (state: PracticeLibraryStore) => state.activeTab;
 

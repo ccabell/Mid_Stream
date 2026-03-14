@@ -5,6 +5,9 @@
  * HITL-TCP-Project requirements.
  */
 
+// Global Library constant - used to identify global/shared items
+export const GLOBAL_LIBRARY_ID = '__global__';
+
 // Base timestamps type
 export interface Timestamps {
   created_at: string;
@@ -34,6 +37,7 @@ export interface Practice {
   name: string;
   is_active: boolean;
   config_level: PracticeConfigLevel;
+  is_global?: boolean; // True for the Global Library entry
 }
 
 export type PracticeConfigLevel = 0 | 1 | 2 | 3;
@@ -41,6 +45,28 @@ export type PracticeConfigLevel = 0 | 1 | 2 | 3;
 // Level 1: Basic (concern vocab, visit checklists)
 // Level 2: Standard (+ service/product catalog)
 // Level 3: Full (+ suggestion rules, brand voice)
+
+// Global Library pseudo-practice entry
+export const GLOBAL_LIBRARY_PRACTICE: Practice = {
+  id: GLOBAL_LIBRARY_ID,
+  name: 'Global Library',
+  is_active: true,
+  config_level: 3,
+  is_global: true,
+};
+
+// Helper to check if a practice ID represents the global library
+export const isGlobalLibrary = (practiceId: string | null): boolean => {
+  return practiceId === GLOBAL_LIBRARY_ID || practiceId === null;
+};
+
+// Get the API practice_id parameter (null for global, actual ID for practices)
+export const getApiPracticeId = (practiceId: string | null): string | null => {
+  if (practiceId === GLOBAL_LIBRARY_ID) {
+    return null; // API uses null for global items
+  }
+  return practiceId;
+};
 
 // ============================================
 // Services (Practice Library)

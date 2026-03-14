@@ -5,8 +5,7 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import Grid from '@mui/material/Grid';
 import CircularProgress from '@mui/material/CircularProgress';
-import { BarChart } from '@mui/x-charts/BarChart';
-import { PieChart } from '@mui/x-charts/PieChart';
+import { BarChart, PieChart } from '@mui/x-charts';
 import { runsApi, opportunitiesApi } from 'apiServices';
 import type { Run, Opportunity } from 'apiServices';
 

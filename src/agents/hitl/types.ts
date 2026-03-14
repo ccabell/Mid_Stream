@@ -2,6 +2,8 @@
  * HITL Agent Types
  *
  * Types specific to the HITL verification workflow.
+ * Aligned with A360 production patterns for version control,
+ * edit tracking, and clinical review gating.
  */
 
 import type {
@@ -19,6 +21,60 @@ import type {
   Hesitation,
   Concern,
 } from '../types';
+
+// ============================================================================
+// EDIT TRACKING (Production Pattern)
+// ============================================================================
+
+/**
+ * Types of edits that can be made during HITL verification.
+ * Aligned with production ai_output_manual_edits model.
+ */
+export type EditType =
+  | 'CONTENT_MODIFICATION'   // General content edit
+  | 'CLINICAL_CORRECTION'    // Provider correction of clinical info
+  | 'FORMATTING_ADJUSTMENT'  // Style/format changes
+  | 'ERROR_CORRECTION'       // Fixing extraction errors
+  | 'ADDITION'               // Adding new content
+  | 'DELETION'               // Removing content
+  | 'REORDER'                // Changing order/priority
+  | 'VERIFICATION';          // Marking as verified without changes
+
+/**
+ * A single edit record for audit trail
+ */
+export interface EditRecord {
+  id: string;
+  timestamp: string;
+  editType: EditType;
+  section: string;
+  fieldPath: string;
+  previousValue: unknown;
+  newValue: unknown;
+  expertId: string;
+  expertName: string;
+  reason?: string;
+}
+
+/**
+ * Version metadata for conflict detection
+ */
+export interface VersionInfo {
+  version: number;
+  lastModified: string;
+  lastModifiedBy: string;
+  checksum?: string;
+}
+
+/**
+ * Expert attribution for edits
+ */
+export interface ExpertInfo {
+  id: string;
+  name: string;
+  role: 'provider' | 'staff' | 'admin';
+  clinicalCredentials?: string;
+}
 
 // ============================================================================
 // HITL STATE
@@ -42,6 +98,43 @@ export interface HITLState {
 
   /** Validation errors */
   validationErrors: ValidationError[];
+
+  // === Production Patterns ===
+
+  /** Version info for conflict detection */
+  versionInfo: VersionInfo | null;
+
+  /** Edit history for audit trail */
+  editHistory: EditRecord[];
+
+  /** Current expert making edits */
+  currentExpert: ExpertInfo | null;
+
+  /** Whether clinical review is required before TCP generation */
+  clinicalReviewRequired: boolean;
+
+  /** Whether clinical review has been completed */
+  clinicalReviewCompleted: boolean;
+
+  /** ID of clinician who completed review */
+  clinicalReviewedBy: string | null;
+
+  /** Timestamp of clinical review */
+  clinicalReviewedAt: string | null;
+
+  /** Conflict state - set when version mismatch detected */
+  conflictState: ConflictState | null;
+}
+
+/**
+ * State when a version conflict is detected (409 response)
+ */
+export interface ConflictState {
+  serverVersion: number;
+  localVersion: number;
+  serverLastModified: string;
+  serverLastModifiedBy: string;
+  message: string;
 }
 
 export type HITLStep =
@@ -239,6 +332,23 @@ export interface HITLActions {
 
   /** Go to step */
   goToStep: (step: HITLStep) => void;
+
+  // === Production Pattern Actions ===
+
+  /** Set the current expert making edits */
+  setCurrentExpert: (expert: ExpertInfo) => void;
+
+  /** Complete clinical review */
+  completeClinicalReview: (reviewerId: string) => void;
+
+  /** Handle version conflict - reload server data */
+  resolveConflict: (strategy: 'reload' | 'force') => Promise<void>;
+
+  /** Get edit history for audit */
+  getEditHistory: () => EditRecord[];
+
+  /** Check if save would cause conflict (optimistic locking) */
+  checkForConflict: () => Promise<boolean>;
 }
 
 // ============================================================================

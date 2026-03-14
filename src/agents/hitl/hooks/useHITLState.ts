@@ -19,6 +19,11 @@ import type {
   HesitationDraft,
   ConcernDraft,
   PatientSummaryDraft,
+  EditRecord,
+  EditType,
+  ExpertInfo,
+  VersionInfo,
+  ConflictState,
 } from '../types';
 import { transformExtractionToHITLDraft, convertDraftToOutput } from '../utils/transformExtraction';
 import { runsApi, type HITLAnalyzeResponse, type HITLVerificationDraft } from '../../../apiServices/runs.api';
@@ -30,6 +35,15 @@ const INITIAL_STATE: HITLState = {
   draft: null,
   isDirty: false,
   validationErrors: [],
+  // Production patterns
+  versionInfo: null,
+  editHistory: [],
+  currentExpert: null,
+  clinicalReviewRequired: true,
+  clinicalReviewCompleted: false,
+  clinicalReviewedBy: null,
+  clinicalReviewedAt: null,
+  conflictState: null,
 };
 
 /**
@@ -153,6 +167,32 @@ function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
   };
 }
 
+/**
+ * Create an edit record for audit trail
+ */
+function createEditRecord(
+  expert: ExpertInfo | null,
+  editType: EditType,
+  section: string,
+  fieldPath: string,
+  previousValue: unknown,
+  newValue: unknown,
+  reason?: string
+): EditRecord {
+  return {
+    id: uuidv4(),
+    timestamp: new Date().toISOString(),
+    editType,
+    section,
+    fieldPath,
+    previousValue,
+    newValue,
+    expertId: expert?.id ?? 'unknown',
+    expertName: expert?.name ?? 'Unknown User',
+    reason,
+  };
+}
+
 export function useHITLState() {
   const [state, setState] = useState<HITLState>(INITIAL_STATE);
 
@@ -190,6 +230,13 @@ export function useHITLState() {
         .filter(i => i.critical)
         .every(i => i.completed === true);
 
+      // Initialize with version info from API response (if available)
+      const versionInfo: VersionInfo = {
+        version: (response as { version?: number }).version ?? 1,
+        lastModified: new Date().toISOString(),
+        lastModifiedBy: 'system',
+      };
+
       setState({
         currentStep: 'patient_summary',
         loading: false,
@@ -197,6 +244,15 @@ export function useHITLState() {
         draft,
         isDirty: false,
         validationErrors: [],
+        // Production patterns
+        versionInfo,
+        editHistory: [],
+        currentExpert: null,
+        clinicalReviewRequired: true,
+        clinicalReviewCompleted: false,
+        clinicalReviewedBy: null,
+        clinicalReviewedAt: null,
+        conflictState: null,
       });
     } catch (error) {
       setState(prev => ({
@@ -222,6 +278,13 @@ export function useHITLState() {
     try {
       const draft = transformExtractionToHITLDraft(extraction);
 
+      // Initialize with version info for client-side fallback
+      const versionInfo: VersionInfo = {
+        version: 1,
+        lastModified: new Date().toISOString(),
+        lastModifiedBy: 'client',
+      };
+
       setState({
         currentStep: 'patient_summary',
         loading: false,
@@ -229,6 +292,15 @@ export function useHITLState() {
         draft,
         isDirty: false,
         validationErrors: [],
+        // Production patterns
+        versionInfo,
+        editHistory: [],
+        currentExpert: null,
+        clinicalReviewRequired: true,
+        clinicalReviewCompleted: false,
+        clinicalReviewedBy: null,
+        clinicalReviewedAt: null,
+        conflictState: null,
       });
     } catch (error) {
       setState(prev => ({
@@ -742,6 +814,92 @@ export function useHITLState() {
     setState(prev => ({ ...prev, currentStep: step }));
   }, []);
 
+  // =========================================================================
+  // PRODUCTION PATTERN ACTIONS
+  // =========================================================================
+
+  /**
+   * Set the current expert making edits
+   */
+  const setCurrentExpert = useCallback((expert: ExpertInfo) => {
+    setState(prev => ({ ...prev, currentExpert: expert }));
+  }, []);
+
+  /**
+   * Complete clinical review
+   */
+  const completeClinicalReview = useCallback((reviewerId: string) => {
+    setState(prev => {
+      const editRecord = createEditRecord(
+        prev.currentExpert,
+        'VERIFICATION',
+        'clinical_review',
+        'status',
+        { completed: false },
+        { completed: true, reviewerId },
+        'Clinical review completed'
+      );
+
+      return {
+        ...prev,
+        clinicalReviewCompleted: true,
+        clinicalReviewedBy: reviewerId,
+        clinicalReviewedAt: new Date().toISOString(),
+        editHistory: [...prev.editHistory, editRecord],
+      };
+    });
+  }, []);
+
+  /**
+   * Handle version conflict - reload server data or force save
+   */
+  const resolveConflict = useCallback(async (strategy: 'reload' | 'force') => {
+    const { runId, practiceId } = contextRef.current;
+    if (!runId) return;
+
+    if (strategy === 'reload') {
+      // Re-initialize from server
+      setState(prev => ({ ...prev, conflictState: null }));
+      await initFromApi(runId, practiceId);
+    } else if (strategy === 'force') {
+      // Clear conflict and allow save (will bump version)
+      setState(prev => ({
+        ...prev,
+        conflictState: null,
+        versionInfo: prev.versionInfo
+          ? { ...prev.versionInfo, version: prev.versionInfo.version + 1 }
+          : null,
+      }));
+    }
+  }, [initFromApi]);
+
+  /**
+   * Get edit history for audit
+   */
+  const getEditHistory = useCallback((): EditRecord[] => {
+    return state.editHistory;
+  }, [state.editHistory]);
+
+  /**
+   * Check if save would cause conflict (optimistic locking)
+   * Returns true if there is a conflict
+   */
+  const checkForConflict = useCallback(async (): Promise<boolean> => {
+    const { runId } = contextRef.current;
+    if (!runId || !state.versionInfo) return false;
+
+    try {
+      // This would call an API endpoint to check current version
+      // For now, we simulate by returning false (no conflict)
+      // In production: const serverVersion = await runsApi.getVersion(runId);
+      // return serverVersion > state.versionInfo.version;
+      return false;
+    } catch {
+      // On error, assume no conflict to allow save attempt
+      return false;
+    }
+  }, [state.versionInfo]);
+
   // Computed values
   const progress = useMemo(() => {
     if (!state.draft) return 0;
@@ -800,6 +958,12 @@ export function useHITLState() {
       // Navigation
       reset,
       goToStep,
+      // Production pattern actions
+      setCurrentExpert,
+      completeClinicalReview,
+      resolveConflict,
+      getEditHistory,
+      checkForConflict,
     },
   };
 }

@@ -34,6 +34,7 @@ import {
   PackageFormModal,
   ConcernFormModal,
   ImportFromGlobalModal,
+  PracticeConfigPanel,
 } from 'components/practiceLibrary';
 import {
   usePracticeLibraryStore,
@@ -54,9 +55,23 @@ function LibraryContent() {
       return <PackagesList />;
     case 'concerns':
       return <ConcernsList />;
+    case 'configuration':
+      return <PracticeConfigPanel />;
     default:
       return null;
   }
+}
+
+function LibraryContentWithActions() {
+  const activeTab = usePracticeLibraryStore(practiceLibrarySelectors.selectActiveTab);
+  const isConfigTab = activeTab === 'configuration';
+
+  return (
+    <>
+      {!isConfigTab && <SearchAndActions />}
+      <LibraryContent />
+    </>
+  );
 }
 
 function SearchAndActions() {
@@ -264,8 +279,7 @@ export function PracticeLibraryPage() {
         <>
           <LibraryTabs />
           <Box sx={{ mt: 3 }}>
-            <SearchAndActions />
-            <LibraryContent />
+            <LibraryContentWithActions />
           </Box>
         </>
       )}

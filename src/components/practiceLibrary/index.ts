@@ -19,3 +19,6 @@ export { ConcernFormModal } from './ConcernFormModal';
 export { FileUploadZone } from './FileUploadZone';
 export { MatchReviewList } from './MatchReviewList';
 export { ImportFromGlobalModal } from './ImportFromGlobalModal';
+
+// Configuration
+export { PracticeConfigPanel } from './PracticeConfigPanel';

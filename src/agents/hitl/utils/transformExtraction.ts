@@ -3,10 +3,17 @@
  *
  * Converts raw extraction output into the working draft state
  * for the HITL verification screen.
+ *
+ * Handles both V2 (FieldWithEvidence wrapped) and legacy formats.
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import type { ExtractionOutput, Offering, TCPSettings } from '../../types';
+import type { ExtractionOutput, Offering, TCPSettings, Pass1Output, Pass2Output } from '../../types';
+import type {
+  V2Pass1Output,
+  V2Pass2Output,
+  V2Offering,
+} from '../../../apiServices/types';
 import type {
   HITLDraft,
   PatientSummaryDraft,
@@ -20,6 +27,255 @@ import type {
   ChecklistItemDraft,
   VerifiableField,
 } from '../types';
+
+/**
+ * Unwrap a FieldWithEvidence value, returning the value or a default
+ */
+function unwrap<T>(field: { value: T | null } | T | null | undefined, defaultValue: T): T {
+  if (field === null || field === undefined) return defaultValue;
+  if (typeof field === 'object' && 'value' in field) {
+    return field.value ?? defaultValue;
+  }
+  return field as T;
+}
+
+/**
+ * Unwrap an array field from FieldWithEvidence
+ */
+function unwrapArray<T>(field: { value: T[] | null } | T[] | null | undefined): T[] {
+  if (field === null || field === undefined) return [];
+  if (Array.isArray(field)) return field;
+  if (typeof field === 'object' && 'value' in field) {
+    return field.value ?? [];
+  }
+  return [];
+}
+
+/**
+ * Convert V2Pass1Output to Pass1Output format
+ */
+function convertV2Pass1(v2: V2Pass1Output): Pass1Output {
+  return {
+    extraction_version: '3.0',
+    pass: 1,
+    visit_context: {
+      visit_type: unwrap(v2.visit_context?.visit_type, 'unknown') as Pass1Output['visit_context']['visit_type'],
+      reason_for_visit: unwrap(v2.visit_context?.reason_for_visit, ''),
+      referred_by: unwrap(v2.visit_context?.referred_by, null),
+      motivating_event: unwrap(v2.visit_context?.motivating_event, null),
+    },
+    patient_goals: {
+      primary_concern: unwrap(v2.patient_goals?.primary_concern, ''),
+      secondary_concerns: unwrapArray(v2.patient_goals?.secondary_concerns),
+      goals: unwrapArray(v2.patient_goals?.goals),
+      anticipated_outcomes: unwrapArray(v2.patient_goals?.anticipated_outcomes),
+    },
+    areas: {
+      treatment_areas: unwrapArray(v2.areas?.treatment_areas),
+      concern_areas: unwrapArray(v2.areas?.concern_areas),
+    },
+    interests: {
+      stated_interests: unwrapArray(v2.interests?.stated_interests),
+      future_interests: (v2.interests?.future_interests ?? []).map(fi => ({
+        interest: fi.interest,
+        interest_level: fi.interest_level ?? null,
+        evidence: fi.evidence?.quote ?? '',
+      })),
+    },
+    offerings: (v2.offerings ?? []).map(convertV2Offering),
+  };
+}
+
+/**
+ * Convert V2Offering to Offering format
+ */
+function convertV2Offering(v2: V2Offering): Offering {
+  // Map V2 disposition to legacy disposition
+  const dispositionMap: Record<string, Offering['disposition']> = {
+    'performed': 'performed',
+    'scheduled': 'scheduled',
+    'agreed_pending': 'discussed',
+    'recommended_receptive': 'recommended',
+    'recommended_hesitant': 'recommended',
+    'recommended_declined': 'mentioned',
+    'discussed': 'discussed',
+    'purchased': 'performed',
+  };
+
+  // Derive guidance discovery from V2 disposition
+  const receptionMap: Record<string, 'engaged' | 'curious' | 'hesitant' | 'passed' | 'unexplored'> = {
+    'performed': 'engaged',
+    'scheduled': 'engaged',
+    'agreed_pending': 'engaged',
+    'recommended_receptive': 'engaged',
+    'recommended_hesitant': 'hesitant',
+    'recommended_declined': 'passed',
+    'discussed': 'curious',
+    'purchased': 'engaged',
+  };
+
+  return {
+    name: v2.name,
+    type: v2.type,
+    disposition: dispositionMap[v2.disposition] ?? 'discussed',
+    area: v2.area ?? null,
+    quantity: v2.quantity ?? null,
+    value: v2.value ?? v2.mentioned_value ?? null,
+    guidance_discovery: {
+      provider_guided: true,
+      guidance_type: null,
+      patient_reception: receptionMap[v2.disposition] ?? 'unexplored',
+      reception_evidence: v2.evidence?.quote ?? null,
+      guidance_rationale: null,
+    },
+  };
+}
+
+/**
+ * Convert V2Pass2Output to Pass2Output format
+ */
+function convertV2Pass2(v2: V2Pass2Output): Pass2Output {
+  // Map objections
+  const objections = (v2.patient_signals?.objections ?? []).map(obj => ({
+    id: uuidv4(),
+    type: (obj.type as Pass2Output['objections'][0]['type']) ?? 'other',
+    statement: obj.statement ?? obj.objection ?? '',
+    resolved: obj.resolved ?? (obj.resolution_status === 'resolved' ? true : obj.resolution_status === 'unresolved' ? false : null),
+    resolution_approach: obj.suggested_response ?? null,
+  }));
+
+  // Map hesitations
+  const hesitations = (v2.patient_signals?.hesitations ?? []).map(hes => ({
+    id: uuidv4(),
+    topic: hes.topic,
+    statement: hes.statement ?? '',
+    resolved: hes.resolved ?? (hes.resolution_status === 'resolved' ? true : hes.resolution_status === 'unresolved' ? false : null),
+    resolution_approach: null,
+  }));
+
+  // Map concerns
+  const concerns = (v2.patient_signals?.concerns ?? []).map(con => ({
+    id: uuidv4(),
+    concern: con.concern,
+    raised_by: con.raised_by,
+    category: 'other' as const,
+    addressed: con.addressed ?? null,
+    response: null,
+  }));
+
+  // Map visit checklist - V2 doesn't have item_id, category, or critical
+  const visitChecklist = (v2.visit_checklist ?? []).map((item, idx) => ({
+    item_id: `item_${idx}`,
+    item_label: item.item_label,
+    category: 'clinical' as const,
+    completed: item.completed,
+    critical: false,
+    evidence: item.evidence ?? null,
+  }));
+
+  // Map outcome status
+  const statusValue = unwrap(v2.outcome?.status, 'information_only');
+  const outcomeStatusMap: Record<string, Pass2Output['outcome']['status']> = {
+    'treatment_performed': 'treatment_performed',
+    'booked': 'booked',
+    'agreed_pending_scheduling': 'agreed_pending_scheduling',
+    'agreed': 'agreed_pending_scheduling',
+    'thinking': 'thinking',
+    'considering': 'thinking',
+    'follow_up_requested': 'follow_up_requested',
+    'declined': 'declined',
+    'information_only': 'information_only',
+  };
+
+  // Map commitment level from intent score
+  const intentScore = unwrap(v2.patient_signals?.intent_score, null) ?? unwrap(v2.patient_signals?.intent_level, null);
+  let commitmentLevel: Pass2Output['patient_signals']['commitment_level'] = 'uncertain';
+  if (intentScore !== null) {
+    if (intentScore >= 80) commitmentLevel = 'committed';
+    else if (intentScore >= 60) commitmentLevel = 'interested';
+    else if (intentScore >= 40) commitmentLevel = 'considering';
+    else if (intentScore >= 20) commitmentLevel = 'uncertain';
+    else commitmentLevel = 'not_interested';
+  }
+
+  return {
+    extraction_version: '3.0',
+    pass: 2,
+    outcome: {
+      status: outcomeStatusMap[statusValue] ?? 'information_only',
+      summary: unwrap(v2.outcome?.summary, ''),
+    },
+    next_steps: (v2.next_steps ?? []).map(ns => ({
+      action: ns.action,
+      timeframe: ns.timing ?? null,
+      owner: ns.owner ?? null,
+    })),
+    patient_signals: {
+      commitment_level: commitmentLevel,
+    },
+    objections,
+    hesitations,
+    concerns,
+    visit_checklist: visitChecklist,
+  };
+}
+
+/**
+ * Check if a parsed_json is V2 format (has FieldWithEvidence wrappers)
+ */
+function isV2Pass1(json: unknown): json is V2Pass1Output {
+  if (!json || typeof json !== 'object') return false;
+  const obj = json as Record<string, unknown>;
+  // V2 format has patient_goals.primary_concern.value structure
+  const pg = obj.patient_goals as Record<string, unknown> | undefined;
+  if (pg?.primary_concern && typeof pg.primary_concern === 'object') {
+    return 'value' in (pg.primary_concern as object);
+  }
+  // Also check if offerings are V2 format (different disposition values)
+  const offerings = obj.offerings as V2Offering[] | undefined;
+  if (offerings?.[0]?.disposition) {
+    const v2Dispositions = ['agreed_pending', 'recommended_receptive', 'recommended_hesitant', 'recommended_declined', 'purchased'];
+    return v2Dispositions.includes(offerings[0].disposition);
+  }
+  return false;
+}
+
+/**
+ * Check if a parsed_json is V2 Pass2 format
+ */
+function isV2Pass2(json: unknown): json is V2Pass2Output {
+  if (!json || typeof json !== 'object') return false;
+  const obj = json as Record<string, unknown>;
+  // V2 format has patient_signals.objections instead of top-level objections
+  return 'patient_signals' in obj && !('objections' in obj);
+}
+
+/**
+ * Normalize extraction output - convert V2 to standard format if needed
+ */
+export function normalizeExtractionOutput(extraction: ExtractionOutput): ExtractionOutput {
+  let pass1 = extraction.prompt_1.parsed_json;
+  let pass2 = extraction.prompt_2.parsed_json;
+
+  // Convert V2 format if detected
+  if (isV2Pass1(pass1)) {
+    pass1 = convertV2Pass1(pass1);
+  }
+  if (isV2Pass2(pass2)) {
+    pass2 = convertV2Pass2(pass2);
+  }
+
+  return {
+    prompt_1: {
+      parsed_json: pass1,
+      raw_response: extraction.prompt_1.raw_response,
+    },
+    prompt_2: {
+      parsed_json: pass2,
+      raw_response: extraction.prompt_2.raw_response,
+    },
+  };
+}
 
 /**
  * Create a verifiable field from a value
@@ -176,8 +432,10 @@ function formatRationale(rationale: string, offeringName: string): string {
 export function transformExtractionToHITLDraft(
   extraction: ExtractionOutput
 ): HITLDraft {
-  const pass1 = extraction.prompt_1.parsed_json;
-  const pass2 = extraction.prompt_2.parsed_json;
+  // Normalize V2 format to standard format if needed
+  const normalized = normalizeExtractionOutput(extraction);
+  const pass1 = normalized.prompt_1.parsed_json;
+  const pass2 = normalized.prompt_2.parsed_json;
 
   // Patient Summary
   const patientSummary: PatientSummaryDraft = {

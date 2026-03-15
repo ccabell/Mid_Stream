@@ -72,13 +72,13 @@ function convertV2Pass1(v2: V2Pass1Output): Pass1Output {
     },
     interests: {
       stated_interests: unwrapArray(v2.interests?.stated_interests),
-      future_interests: (v2.interests?.future_interests ?? []).map(fi => ({
-        interest: fi.interest,
+      future_interests: unwrapArray(v2.interests?.future_interests).map(fi => ({
+        interest: fi.interest || '',
         interest_level: fi.interest_level ?? null,
         evidence: fi.evidence?.quote ?? '',
       })),
     },
-    offerings: (v2.offerings ?? []).map(convertV2Offering),
+    offerings: unwrapArray(v2.offerings).map(convertV2Offering),
   };
 }
 

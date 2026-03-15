@@ -23,10 +23,9 @@ import type {
   EditType,
   ExpertInfo,
   VersionInfo,
-  ConflictState,
 } from '../types';
 import { transformExtractionToHITLDraft, convertDraftToOutput } from '../utils/transformExtraction';
-import { runsApi, type HITLAnalyzeResponse, type HITLVerificationDraft } from '../../../apiServices/runs.api';
+import { runsApi, type HITLVerificationDraft } from '../../../apiServices/runs.api';
 
 const INITIAL_STATE: HITLState = {
   currentStep: 'loading',

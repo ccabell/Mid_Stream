@@ -20,11 +20,7 @@ import type {
   TreatmentDraft,
   RecommendationDraft,
   NeedsAttentionDraft,
-  ObjectionDraft,
-  HesitationDraft,
-  ConcernDraft,
   ChecklistDraft,
-  ChecklistItemDraft,
   VerifiableField,
 } from '../types';
 
@@ -292,7 +288,7 @@ function createVerifiableField<T>(value: T): VerifiableField<T> {
 /**
  * Determine urgency based on motivating event and timeframe
  */
-function determineUrgency(event: string | null, _timeframe: string | null): 'high' | 'medium' | 'low' {
+function determineUrgency(event: string | null): 'high' | 'medium' | 'low' {
   if (!event) return 'low';
 
   const eventLower = event.toLowerCase();
@@ -357,7 +353,7 @@ function transformOfferingsToRecommendations(offerings: Offering[]): Recommendat
       const gd = offering.guidance_discovery;
       let patientBenefit = 50;
       let clinicalViability = 70;
-      let practiceValue = 60;
+      const practiceValue = 60;
 
       // Adjust based on patient reception
       if (gd?.patient_reception === 'engaged') {
@@ -455,7 +451,7 @@ export function transformExtractionToHITLDraft(
     timeline: {
       event: visitContext.motivating_event || null,
       timeframe: null,
-      urgency: determineUrgency(visitContext.motivating_event || null, null),
+      urgency: determineUrgency(visitContext.motivating_event || null),
     },
   };
 

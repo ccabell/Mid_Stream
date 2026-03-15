@@ -8,6 +8,7 @@ export const ROUTES = {
   CONSULTATION_DETAIL: '/consultations/:runId',
   OPPORTUNITIES: '/opportunities',
   AGENTS: '/agents',
+  PRACTICES: '/practices',
   PRACTICE_LIBRARY: '/practice-library',
   PROMPTS: '/prompts',
   TCP: '/tcp',

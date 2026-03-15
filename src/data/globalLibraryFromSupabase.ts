@@ -12,7 +12,7 @@ export interface GlobalProduct {
   id: string;
   name: string;
   code: string;
-  description: string;
+  description: string | null;
   manufacturer: string | null;
   manufacturer_id: number | null;
   brand_name: string | null;
@@ -23,33 +23,38 @@ export interface GlobalProduct {
   url: string | null;
   logo_url: string | null;
   form: string | null;
-  active_ingredients: string | null;
-  contraindications: string | null;
+  active_ingredients: string | string[] | null;
+  contraindications: string | string[] | null;
   dosing_guidelines: string | null;
   onset_time: string | null;
   peak_effect: string | null;
   duration_of_effect: string | null;
   storage_requirements: string | null;
+  reconstitution_instructions: string | null;
+  regulatory_status: string | null;
+  external_codes: Record<string, string> | null;
+  metadata: Record<string, unknown>;
   requires_prescription: boolean;
   is_active: boolean;
   practice_id: string | null; // null = global, uuid = practice-specific
   created_at: string;
   updated_at: string;
+  [key: string]: unknown; // Allow additional properties from Supabase
 }
 
 export interface GlobalService {
   id: string;
   name: string;
   code: string;
-  description: string;
+  description: string | null;
   category_id: string | null;
   service_type: string | null;
   complexity_level: string | null;
   base_price: number | null;
   currency: string;
   duration_minutes: number | null;
-  contraindications: string | null;
-  indications: string | null;
+  contraindications: string | string[] | null;
+  indications: string | string[] | null;
   pre_procedure_instructions: string | null;
   post_procedure_instructions: string | null;
   expected_outcomes: string | null;
@@ -60,6 +65,7 @@ export interface GlobalService {
   practice_id: string | null; // null = global, uuid = practice-specific
   created_at: string;
   updated_at: string;
+  [key: string]: unknown; // Allow additional properties from Supabase
 }
 
 /**

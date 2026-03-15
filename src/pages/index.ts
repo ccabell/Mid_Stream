@@ -5,6 +5,7 @@ export { RunDetailPage } from './RunDetailPage';
 export { HITLVerificationPage } from './HITLVerificationPage';
 export { OpportunitiesPage } from './OpportunitiesPage';
 export { AgentsPage } from './AgentsPage';
+export { PracticesPage } from './PracticesPage';
 export { PracticeLibraryPage } from './PracticeLibraryPage';
 export { PromptManagerPage } from './PromptManager';
 export { TCPWrapperPage } from './TCPWrapperPage';

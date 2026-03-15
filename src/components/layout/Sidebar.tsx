@@ -15,6 +15,7 @@ import PlaylistPlayIcon from '@mui/icons-material/PlaylistPlay';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import BusinessIcon from '@mui/icons-material/Business';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import SyncIcon from '@mui/icons-material/CloudSync';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -37,6 +38,7 @@ const navItems = [
   { label: 'TCP', path: ROUTES.TCP, icon: <AssignmentIcon /> },
   { label: 'Opportunities', path: ROUTES.OPPORTUNITIES, icon: <LightbulbIcon /> },
   { label: 'Agents', path: ROUTES.AGENTS, icon: <SmartToyIcon /> },
+  { label: 'Practices', path: ROUTES.PRACTICES, icon: <BusinessIcon /> },
   { label: 'Library', path: ROUTES.PRACTICE_LIBRARY, icon: <LibraryBooksIcon /> },
   { label: 'Prompts', path: ROUTES.PROMPTS, icon: <DescriptionIcon /> },
   { label: 'Integrations', path: ROUTES.INTEGRATIONS, icon: <SyncIcon /> },

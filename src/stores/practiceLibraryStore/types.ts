@@ -15,7 +15,18 @@ import type { MatchResult, SelectedMatch } from 'utils/stringMatcher';
 
 export type LibraryMode = 'global' | 'practice';
 
-export type LibraryTab = 'services' | 'products' | 'packages' | 'concerns';
+export type LibraryTab = 'services' | 'products' | 'packages' | 'concerns' | 'configuration';
+
+/**
+ * Practice-specific configuration for anatomy areas and concerns.
+ * This enables standardized AI outputs by defining the practice's vocabulary.
+ */
+export interface PracticeConfiguration {
+  selectedAnatomyAreas: string[];
+  selectedConcerns: string[];
+  customAnatomyAreas: string[];
+  customConcerns: string[];
+}
 
 export type PLServicesData = ListOfItems<PLService>;
 export type PLProductsData = ListOfItems<PLProduct>;
@@ -75,6 +86,10 @@ export interface PracticeLibraryState {
   matchResults: MatchResult[];
   selectedMatches: SelectedMatch[];
   isMatching: boolean;
+
+  // Practice configuration (anatomy areas & concerns)
+  practiceConfig: PracticeConfiguration | null;
+  isLoadingConfig: boolean;
 }
 
 export interface PracticeLibraryActions {
@@ -129,6 +144,18 @@ export interface PracticeLibraryActions {
   updateSelectedMatch: (index: number, match: SelectedMatch) => void;
   setIsMatching: (loading: boolean) => void;
   resetImportState: () => void;
+
+  // Practice configuration
+  setPracticeConfig: (config: PracticeConfiguration | null) => void;
+  updateSelectedAnatomyAreas: (areaIds: string[]) => void;
+  updateSelectedConcerns: (concernIds: string[]) => void;
+  addCustomAnatomyArea: (area: string) => void;
+  removeCustomAnatomyArea: (area: string) => void;
+  addCustomConcern: (concern: string) => void;
+  removeCustomConcern: (concern: string) => void;
+  setIsLoadingConfig: (loading: boolean) => void;
+  savePracticeConfig: () => void;
+  loadPracticeConfig: (practiceId: string) => void;
 
   // Reset
   reset: () => void;

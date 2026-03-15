@@ -72,6 +72,10 @@ const initialState: PracticeLibraryState = {
   matchResults: [],
   selectedMatches: [],
   isMatching: false,
+
+  // Practice configuration
+  practiceConfig: null,
+  isLoadingConfig: false,
 };
 
 export const usePracticeLibraryStore = createTypedStore<PracticeLibraryStore, PracticeLibraryState>(
@@ -284,6 +288,119 @@ export const usePracticeLibraryStore = createTypedStore<PracticeLibraryStore, Pr
           state.matchResults = [];
           state.selectedMatches = [];
           state.isMatching = false;
+        });
+      },
+
+      // Practice configuration
+      setPracticeConfig: (config) => {
+        set((state) => {
+          state.practiceConfig = config;
+        });
+      },
+      updateSelectedAnatomyAreas: (areaIds) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            state.practiceConfig.selectedAnatomyAreas = areaIds;
+          } else {
+            state.practiceConfig = {
+              selectedAnatomyAreas: areaIds,
+              selectedConcerns: [],
+              customAnatomyAreas: [],
+              customConcerns: [],
+            };
+          }
+        });
+      },
+      updateSelectedConcerns: (concernIds) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            state.practiceConfig.selectedConcerns = concernIds;
+          } else {
+            state.practiceConfig = {
+              selectedAnatomyAreas: [],
+              selectedConcerns: concernIds,
+              customAnatomyAreas: [],
+              customConcerns: [],
+            };
+          }
+        });
+      },
+      addCustomAnatomyArea: (area) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            if (!state.practiceConfig.customAnatomyAreas.includes(area)) {
+              state.practiceConfig.customAnatomyAreas.push(area);
+            }
+          } else {
+            state.practiceConfig = {
+              selectedAnatomyAreas: [],
+              selectedConcerns: [],
+              customAnatomyAreas: [area],
+              customConcerns: [],
+            };
+          }
+        });
+      },
+      removeCustomAnatomyArea: (area) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            state.practiceConfig.customAnatomyAreas =
+              state.practiceConfig.customAnatomyAreas.filter((a) => a !== area);
+          }
+        });
+      },
+      addCustomConcern: (concern) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            if (!state.practiceConfig.customConcerns.includes(concern)) {
+              state.practiceConfig.customConcerns.push(concern);
+            }
+          } else {
+            state.practiceConfig = {
+              selectedAnatomyAreas: [],
+              selectedConcerns: [],
+              customAnatomyAreas: [],
+              customConcerns: [concern],
+            };
+          }
+        });
+      },
+      removeCustomConcern: (concern) => {
+        set((state) => {
+          if (state.practiceConfig) {
+            state.practiceConfig.customConcerns =
+              state.practiceConfig.customConcerns.filter((c) => c !== concern);
+          }
+        });
+      },
+      setIsLoadingConfig: (loading) => {
+        set((state) => {
+          state.isLoadingConfig = loading;
+        });
+      },
+      savePracticeConfig: () => {
+        set((state) => {
+          if (state.selectedPracticeId && state.practiceConfig) {
+            const key = `practice-config-${state.selectedPracticeId}`;
+            localStorage.setItem(key, JSON.stringify(state.practiceConfig));
+          }
+        });
+      },
+      loadPracticeConfig: (practiceId) => {
+        set((state) => {
+          state.isLoadingConfig = true;
+          const key = `practice-config-${practiceId}`;
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            try {
+              state.practiceConfig = JSON.parse(stored);
+            } catch {
+              state.practiceConfig = null;
+            }
+          } else {
+            state.practiceConfig = null;
+          }
+          state.isLoadingConfig = false;
         });
       },
 

@@ -232,12 +232,18 @@ export function PracticesPage() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    Promise.all([practicesApi.list(), runsApi.list()])
-      .then(([practicesData, runsData]) => {
+    // Fetch practices first, then runs for stats
+    practicesApi.list()
+      .then((practicesData) => {
         setPractices(practicesData);
-        setRuns(runsData);
+        // Fetch runs separately for stats - don't fail page if this errors
+        runsApi.list()
+          .then(setRuns)
+          .catch(() => {
+            // Silently ignore - stats just won't show
+          });
       })
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load data'))
+      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load practices'))
       .finally(() => setLoading(false));
   }, []);
 

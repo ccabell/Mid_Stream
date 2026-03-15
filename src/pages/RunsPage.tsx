@@ -220,10 +220,16 @@ export function RunsPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([runsApi.list(), practicesApi.list()])
-      .then(([runsData, practicesData]) => {
+    // Fetch runs (required) and practices (optional, for display)
+    runsApi.list()
+      .then((runsData) => {
         setRuns(runsData);
-        setPractices(practicesData);
+        // Fetch practices separately - don't fail if this errors
+        practicesApi.list()
+          .then(setPractices)
+          .catch(() => {
+            // Silently ignore practices fetch error - cards will show "No Practice"
+          });
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));

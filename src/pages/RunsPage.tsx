@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -17,8 +17,9 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
-import { runsApi } from 'apiServices';
-import type { Run, V2Pass1Output, V2Pass2Output } from 'apiServices';
+import BusinessIcon from '@mui/icons-material/Business';
+import { runsApi, practicesApi } from 'apiServices';
+import type { Run, V2Pass1Output, V2Pass2Output, Practice } from 'apiServices';
 import { runDetailPath } from 'constants/routes';
 import { format } from 'date-fns';
 
@@ -41,7 +42,7 @@ function getIntentColor(score: number) {
   return { main: '#dc2626', light: '#fee2e2' };
 }
 
-function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
+function RunCard({ run, practiceName, onClick }: { run: Run; practiceName: string | null; onClick: () => void }) {
   const statusConfig = getStatusConfig(run.status);
 
   // Extract key metrics from outputs
@@ -50,7 +51,7 @@ function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
   const offerings = p1?.offerings || [];
   const intentScore = p2?.patient_signals?.intent_level?.value ?? p2?.patient_signals?.intent_score?.value;
   const summary = p2?.outcome?.summary?.value;
-  const hasHITL = !!(run as Run & { prompt_hitl?: unknown }).prompt_hitl;
+  const hasHITL = !!run.prompt_hitl;
   const totalValue = offerings.reduce((sum, o) => sum + (o.value || 0), 0);
 
   return (
@@ -87,9 +88,25 @@ function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
                 <PlaylistPlayIcon sx={{ fontSize: 22, color: 'white' }} />
               </Box>
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
-                  Run {(run.run_id ?? run.id).slice(0, 8)}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                    Run {(run.run_id ?? run.id).slice(0, 8)}
+                  </Typography>
+                  {/* Practice chip */}
+                  <Chip
+                    icon={<BusinessIcon sx={{ fontSize: 12 }} />}
+                    label={practiceName || 'No Practice'}
+                    size="small"
+                    sx={{
+                      height: 20,
+                      fontSize: 10,
+                      fontWeight: 500,
+                      backgroundColor: practiceName ? '#e0f2fe' : '#f3f4f6',
+                      color: practiceName ? '#0369a1' : '#6b7280',
+                      '& .MuiChip-icon': { color: practiceName ? '#0369a1' : '#9ca3af' },
+                    }}
+                  />
+                </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <AccessTimeIcon sx={{ fontSize: 12, color: 'text.secondary' }} />
                   <Typography variant="caption" color="text.secondary">
@@ -197,17 +214,29 @@ function RunCard({ run, onClick }: { run: Run; onClick: () => void }) {
 
 export function RunsPage() {
   const [runs, setRuns] = useState<Run[]>([]);
+  const [practices, setPractices] = useState<Practice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    runsApi
-      .list()
-      .then(setRuns)
+    Promise.all([runsApi.list(), practicesApi.list()])
+      .then(([runsData, practicesData]) => {
+        setRuns(runsData);
+        setPractices(practicesData);
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
   }, []);
+
+  // Create practice lookup map for efficient name resolution
+  const practiceMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of practices) {
+      map.set(p.id, p.name);
+    }
+    return map;
+  }, [practices]);
 
   // Calculate stats
   const completedRuns = runs.filter(r => r.status === 'success' || r.status === 'completed').length;
@@ -305,7 +334,11 @@ export function RunsPage() {
         <Grid container spacing={2.5}>
           {runs.map((run) => (
             <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={run.run_id ?? run.id}>
-              <RunCard run={run} onClick={() => navigate(runDetailPath(run.run_id ?? run.id))} />
+              <RunCard
+                run={run}
+                practiceName={run.practice_id ? practiceMap.get(run.practice_id) ?? null : null}
+                onClick={() => navigate(runDetailPath(run.run_id ?? run.id))}
+              />
             </Grid>
           ))}
         </Grid>

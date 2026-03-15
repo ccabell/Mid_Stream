@@ -211,7 +211,13 @@ export function useHITLState() {
     setState(prev => ({ ...prev, loading: true, error: null }));
     contextRef.current = { runId, practiceId };
 
-    const response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
+    let response;
+    try {
+      response = await runsApi.analyzeForHITL(runId, { practice_id: practiceId });
+    } catch (error) {
+      setState(prev => ({ ...prev, loading: false }));
+      throw error; // Re-throw for caller to handle fallback
+    }
 
     // Check if the API returned a success flag
     if ('success' in response && !response.success) {

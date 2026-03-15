@@ -4,12 +4,25 @@ export interface Run {
   /** Human-readable run identifier (e.g. R-0042). */
   run_id?: string | null;
   transcript_id?: string | null;
+  /** Practice this run was created for */
+  practice_id?: string | null;
   status?: string;
   created_at?: string;
   updated_at?: string;
   notes?: string | null;
   outputs?: RunOutputs;
+  /** HITL verification output (added after HITL verification) */
+  prompt_hitl?: RunHITLOutput | null;
   [key: string]: unknown;
+}
+
+/** HITL verification output stored on a run */
+export interface RunHITLOutput {
+  prompt_name: string;
+  practice_id?: string;
+  parsed_json: Record<string, unknown>;
+  verified_at: string;
+  verified_by: string;
 }
 
 /** Parsed extraction from a single pass */

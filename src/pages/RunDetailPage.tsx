@@ -25,8 +25,9 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ChecklistIcon from '@mui/icons-material/Checklist';
 import WarningIcon from '@mui/icons-material/Warning';
-import { runsApi, agentsApi } from 'apiServices';
-import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult } from 'apiServices';
+import BusinessIcon from '@mui/icons-material/Business';
+import { runsApi, agentsApi, practicesApi } from 'apiServices';
+import type { Run, V2Pass1Output, V2Pass2Output, Agent, DownstreamResult, Practice } from 'apiServices';
 import { ROUTES, runHitlPath, tcpPath } from 'constants/routes';
 import {
   SummaryCard,
@@ -43,6 +44,7 @@ export function RunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [practiceName, setPracticeName] = useState<string | null>(null);
   const [runningAgent, setRunningAgent] = useState<string | null>(null);
   const [agentError, setAgentError] = useState<string | null>(null);
 
@@ -51,10 +53,16 @@ export function RunDetailPage() {
     Promise.all([
       runsApi.getById(runId),
       agentsApi.list(),
+      practicesApi.list(),
     ])
-      .then(([runData, agentsData]) => {
+      .then(([runData, agentsData, practicesData]) => {
         setRun(runData);
         setAgents(agentsData);
+        // Find practice name for this run
+        if (runData.practice_id) {
+          const practice = practicesData.find((p: Practice) => p.id === runData.practice_id);
+          setPracticeName(practice?.name ?? null);
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
@@ -97,7 +105,7 @@ export function RunDetailPage() {
 
   const p1 = run.outputs?.prompt_1?.parsed_json as V2Pass1Output | undefined;
   const p2 = run.outputs?.prompt_2?.parsed_json as V2Pass2Output | undefined;
-  const hasHITL = !!(run as Run & { prompt_hitl?: unknown }).prompt_hitl;
+  const hasHITL = !!run.prompt_hitl;
 
   // Extract data for cards
   const summary = p2?.outcome?.summary?.value;
@@ -123,11 +131,35 @@ export function RunDetailPage() {
         <Typography color="text.primary">Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
       </Breadcrumbs>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
-          <Chip label={run.status || 'Unknown'} color={run.status === 'success' || run.status === 'completed' ? 'success' : 'default'} size="small" />
-          {visitType && <Chip label={String(visitType).replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())} variant="outlined" size="small" />}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 0.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>Run {(run.run_id ?? run.id).slice(0, 8)}</Typography>
+            <Chip label={run.status || 'Unknown'} color={run.status === 'success' || run.status === 'completed' ? 'success' : 'default'} size="small" />
+            {visitType && <Chip label={String(visitType).replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())} variant="outlined" size="small" />}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <BusinessIcon sx={{ fontSize: 16, color: practiceName ? 'primary.main' : 'text.secondary' }} />
+            <Typography variant="body2" sx={{ color: practiceName ? 'text.primary' : 'text.secondary', fontWeight: practiceName ? 500 : 400 }}>
+              {practiceName || 'No practice assigned'}
+            </Typography>
+            {hasHITL && (
+              <Chip
+                icon={<CheckCircleIcon sx={{ fontSize: 12 }} />}
+                label="HITL Verified"
+                size="small"
+                sx={{
+                  ml: 1,
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  backgroundColor: '#dcfce7',
+                  color: '#166534',
+                  '& .MuiChip-icon': { color: '#166534' },
+                }}
+              />
+            )}
+          </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {Boolean(p1 && p2) && (
@@ -319,7 +351,9 @@ export function RunDetailPage() {
               <Box sx={{ display: 'grid', gap: 1 }}>
                 <Box><Typography variant="caption" sx={{ color: 'text.secondary' }}>Run ID</Typography><Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 11 }}>{run.run_id ?? run.id}</Typography></Box>
                 {run.created_at && <Box><Typography variant="caption" sx={{ color: 'text.secondary' }}>Created</Typography><Typography variant="body2">{new Date(run.created_at).toLocaleString()}</Typography></Box>}
+                <Box><Typography variant="caption" sx={{ color: 'text.secondary' }}>Practice</Typography><Typography variant="body2" sx={{ color: practiceName ? 'text.primary' : 'text.secondary' }}>{practiceName || 'Not assigned'}</Typography></Box>
                 {run.transcript_id && <Box><Typography variant="caption" sx={{ color: 'text.secondary' }}>Transcript ID</Typography><Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 11 }}>{run.transcript_id}</Typography></Box>}
+                {hasHITL && run.prompt_hitl && <Box><Typography variant="caption" sx={{ color: 'text.secondary' }}>HITL Verified</Typography><Typography variant="body2" sx={{ color: 'success.main' }}>{new Date(run.prompt_hitl.verified_at).toLocaleString()}</Typography></Box>}
               </Box>
             </Box>
           </Box>

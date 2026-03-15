@@ -437,28 +437,37 @@ export function transformExtractionToHITLDraft(
   const pass1 = normalized.prompt_1.parsed_json;
   const pass2 = normalized.prompt_2.parsed_json;
 
+  // Safe access helpers - handle missing/undefined data
+  const patientGoals = pass1?.patient_goals || {};
+  const visitContext = pass1?.visit_context || {};
+  const offerings = pass1?.offerings || [];
+  const objections = pass2?.objections || [];
+  const hesitations = pass2?.hesitations || [];
+  const concerns = pass2?.concerns || [];
+  const visitChecklist = pass2?.visit_checklist || [];
+
   // Patient Summary
   const patientSummary: PatientSummaryDraft = {
-    primaryConcern: createVerifiableField(pass1.patient_goals.primary_concern),
-    secondaryConcerns: pass1.patient_goals.secondary_concerns.map(c => createVerifiableField(c)),
-    goals: pass1.patient_goals.goals.map(g => createVerifiableField(g)),
-    anticipatedOutcomes: pass1.patient_goals.anticipated_outcomes,
+    primaryConcern: createVerifiableField(patientGoals.primary_concern || ''),
+    secondaryConcerns: (patientGoals.secondary_concerns || []).map(c => createVerifiableField(c)),
+    goals: (patientGoals.goals || []).map(g => createVerifiableField(g)),
+    anticipatedOutcomes: patientGoals.anticipated_outcomes || [],
     timeline: {
-      event: pass1.visit_context.motivating_event,
+      event: visitContext.motivating_event || null,
       timeframe: null,
-      urgency: determineUrgency(pass1.visit_context.motivating_event, null),
+      urgency: determineUrgency(visitContext.motivating_event || null, null),
     },
   };
 
   // Treatments
-  const treatments = transformOfferingsToTreatments(pass1.offerings);
+  const treatments = transformOfferingsToTreatments(offerings);
 
   // Recommendations
-  const recommendations = transformOfferingsToRecommendations(pass1.offerings);
+  const recommendations = transformOfferingsToRecommendations(offerings);
 
   // Needs Attention
   const needsAttention: NeedsAttentionDraft = {
-    objections: pass2.objections.map(obj => ({
+    objections: objections.map(obj => ({
       ...obj,
       id: obj.id || uuidv4(),
       status: obj.resolved === true ? 'resolved' as const :
@@ -467,14 +476,14 @@ export function transformExtractionToHITLDraft(
       suggestedResponseLoading: false,
       notes: obj.resolution_approach || '',
     })),
-    hesitations: pass2.hesitations.map(hes => ({
+    hesitations: hesitations.map(hes => ({
       ...hes,
       id: hes.id || uuidv4(),
       status: hes.resolved === true ? 'resolved' as const :
               hes.resolved === false ? 'unresolved' as const : 'unresolved' as const,
       notes: hes.resolution_approach || '',
     })),
-    concerns: pass2.concerns.map(con => ({
+    concerns: concerns.map(con => ({
       ...con,
       id: con.id || uuidv4(),
       status: con.addressed === true ? 'addressed' as const :
@@ -485,17 +494,17 @@ export function transformExtractionToHITLDraft(
 
   // Checklist
   const checklist: ChecklistDraft = {
-    items: pass2.visit_checklist.map(item => ({
-      itemId: item.item_id,
-      itemLabel: item.item_label,
-      category: item.category,
+    items: visitChecklist.map(item => ({
+      itemId: item.item_id || uuidv4(),
+      itemLabel: item.item_label || '',
+      category: item.category || 'clinical',
       completed: item.completed,
-      critical: item.critical,
-      evidence: item.evidence,
+      critical: item.critical || false,
+      evidence: item.evidence || null,
       manuallyChecked: false,
     })),
-    completionRate: calculateCompletionRate(pass2.visit_checklist),
-    criticalItemsComplete: pass2.visit_checklist
+    completionRate: calculateCompletionRate(visitChecklist),
+    criticalItemsComplete: visitChecklist
       .filter(i => i.critical)
       .every(i => i.completed === true),
   };

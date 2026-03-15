@@ -12,6 +12,7 @@ import type { AgentModule, AgentCategory } from './types';
 // ============================================================================
 
 import { hitlAgent } from './hitl';
+import { tcpRunnerAgent } from './tcp-runner';
 // import { tcpAgent } from './tcp';
 // import { practiceLibraryAgent } from './practice-library';
 
@@ -25,6 +26,7 @@ import { hitlAgent } from './hitl';
  */
 export const agentRegistry: AgentModule[] = [
   hitlAgent,
+  tcpRunnerAgent,
   // tcpAgent,
   // practiceLibraryAgent,
 ];

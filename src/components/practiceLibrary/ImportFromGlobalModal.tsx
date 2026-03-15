@@ -5,7 +5,7 @@
  * them against the Global Library.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -27,8 +27,7 @@ import { FileUploadZone } from './FileUploadZone';
 import { MatchReviewList } from './MatchReviewList';
 import { parseFile, readFileAsText } from 'utils/fileParser';
 import { findMatches } from 'utils/stringMatcher';
-import { globalServices, globalProducts } from 'data/globalLibrarySeed';
-import type { PLService, PLProduct } from 'apiServices/practiceLibrary/types';
+import { globalServices, globalProducts } from 'data/globalLibrary';
 
 const STEPS = [
   { label: 'Upload File', icon: CloudUploadIcon },
@@ -47,24 +46,6 @@ export function ImportFromGlobalModal() {
   const selectedPractice = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPractice);
   const actions = usePracticeLibraryStore(practiceLibrarySelectors.selectActions);
 
-  // Convert global seed data to PLService/PLProduct format for matching
-  const globalServicesList = useMemo<PLService[]>(() => {
-    return globalServices.map((s, i) => ({
-      ...s,
-      id: `global-service-${i}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-  }, []);
-
-  const globalProductsList = useMemo<PLProduct[]>(() => {
-    return globalProducts.map((p, i) => ({
-      ...p,
-      id: `global-product-${i}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
-  }, []);
 
   // Summary stats for confirm step
   const importSummary = useMemo(() => {
@@ -119,7 +100,7 @@ export function ImportFromGlobalModal() {
       actions.setParsedItems(parseResult.items);
 
       // Find matches against global library
-      const matches = findMatches(parseResult.items, globalServicesList, globalProductsList);
+      const matches = findMatches(parseResult.items, globalServices, globalProducts);
       actions.setMatchResults(matches);
 
       // Move to review step

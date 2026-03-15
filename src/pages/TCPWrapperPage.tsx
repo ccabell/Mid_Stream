@@ -16,7 +16,8 @@ import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import BusinessIcon from '@mui/icons-material/Business';
 import { runsApi, practicesApi } from 'apiServices';
-import type { Run, Practice, RunHITLOutput } from 'apiServices/types';
+import type { Run, Practice } from 'apiServices/types';
+import type { HITLVerifiedOutput } from 'agents/types';
 import { TCPPage as TCPAgent } from 'agents/tcp';
 import { runDetailPath, ROUTES } from 'constants/routes';
 
@@ -116,7 +117,8 @@ export function TCPWrapperPage() {
   }
 
   // Check if run has HITL output (required for AI-generated TCP)
-  const hitlOutput = run.prompt_hitl as RunHITLOutput | null | undefined;
+  // The parsed_json from run.prompt_hitl is HITLVerifiedOutput
+  const hitlOutput = run.prompt_hitl?.parsed_json as HITLVerifiedOutput | undefined;
   const practiceId = typeof run.practice_id === 'string' ? run.practice_id : undefined;
 
   return (
@@ -136,7 +138,7 @@ export function TCPWrapperPage() {
 
       <TCPAgent
         runId={runId}
-        hitlOutput={hitlOutput ? { parsed_json: hitlOutput.parsed_json } : undefined}
+        hitlOutput={hitlOutput}
         practiceId={practiceId}
         onComplete={handleComplete}
         onCancel={handleCancel}

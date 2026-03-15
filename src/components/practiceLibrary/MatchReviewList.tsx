@@ -166,7 +166,7 @@ function MatchReviewItem({ result, selected, onUpdate }: MatchReviewItemProps) {
                       sx={{ minWidth: 70 }}
                     />
                     <Typography variant="body2" noWrap sx={{ flex: 1 }}>
-                      {match.item.title}
+                      {match.item.name}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
                       {match.score}%

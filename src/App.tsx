@@ -16,7 +16,7 @@ import {
   AgentsPage,
   PracticeLibraryPage,
   PromptManagerPage,
-  TCPPage,
+  TCPWrapperPage,
   IntegrationsPage,
 } from 'pages';
 
@@ -37,8 +37,8 @@ export default function App() {
             <Route path={ROUTES.AGENTS} element={<AgentsPage />} />
             <Route path={ROUTES.PRACTICE_LIBRARY} element={<PracticeLibraryPage />} />
             <Route path={ROUTES.PROMPTS} element={<PromptManagerPage />} />
-            <Route path={ROUTES.TCP} element={<TCPPage />} />
-            <Route path={ROUTES.TCP_FROM_RUN} element={<TCPPage />} />
+            <Route path={ROUTES.TCP} element={<TCPWrapperPage />} />
+            <Route path={ROUTES.TCP_FROM_RUN} element={<TCPWrapperPage />} />
             <Route path={ROUTES.INTEGRATIONS} element={<IntegrationsPage />} />
           </Route>
         </Routes>

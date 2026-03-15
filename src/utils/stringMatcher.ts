@@ -6,11 +6,11 @@
  */
 
 import type { ParsedItem } from './fileParser';
-import type { PLService, PLProduct } from 'apiServices/practiceLibrary/types';
+import type { GlobalService, GlobalProduct } from 'data/globalLibrary';
 
 export interface MatchCandidate {
   type: 'service' | 'product';
-  item: PLService | PLProduct;
+  item: GlobalService | GlobalProduct;
   score: number; // 0-100
   matchedOn: string[]; // Fields that contributed to match
 }
@@ -33,8 +33,8 @@ export interface SelectedMatch {
  */
 export function findMatches(
   parsedItems: ParsedItem[],
-  globalServices: PLService[],
-  globalProducts: PLProduct[]
+  globalServices: GlobalService[],
+  globalProducts: GlobalProduct[]
 ): MatchResult[] {
   return parsedItems.map((item) => findMatchesForItem(item, globalServices, globalProducts));
 }
@@ -44,41 +44,55 @@ export function findMatches(
  */
 function findMatchesForItem(
   item: ParsedItem,
-  globalServices: PLService[],
-  globalProducts: PLProduct[]
+  globalServices: GlobalService[],
+  globalProducts: GlobalProduct[]
 ): MatchResult {
   const candidates: MatchCandidate[] = [];
 
   // Match against services
   for (const service of globalServices) {
-    const score = calculateMatchScore(item, {
-      title: service.title,
+    const score = calculateMatchScoreWithAliases(item, {
+      name: service.name,
       description: service.description,
-      category: service.category,
+      category: service.category_code,
+      aliases: service.aliases,
     });
     if (score > 0) {
       candidates.push({
         type: 'service',
         item: service,
         score,
-        matchedOn: getMatchedFields(item, service.title, service.description, service.category),
+        matchedOn: getMatchedFieldsWithAliases(
+          item,
+          service.name,
+          service.description,
+          service.category_code,
+          service.aliases
+        ),
       });
     }
   }
 
   // Match against products
   for (const product of globalProducts) {
-    const score = calculateMatchScore(item, {
-      title: product.title,
+    const score = calculateMatchScoreWithAliases(item, {
+      name: product.name,
       description: product.description,
-      category: product.category,
+      category: product.category_code,
+      aliases: product.aliases,
     });
     if (score > 0) {
       candidates.push({
         type: 'product',
         item: product,
         score,
-        matchedOn: getMatchedFields(item, product.title, product.description, product.category),
+        matchedOn: getMatchedFieldsWithAliases(
+          item,
+          product.name,
+          product.description,
+          product.category_code,
+          product.aliases
+        ),
       });
     }
   }
@@ -99,17 +113,25 @@ function findMatchesForItem(
 }
 
 /**
- * Calculate match score between parsed item and target.
+ * Calculate match score between parsed item and target (with aliases support).
  */
-function calculateMatchScore(
+function calculateMatchScoreWithAliases(
   item: ParsedItem,
-  target: { title: string; description: string | null; category: string | null }
+  target: { name: string; description: string; category: string; aliases: string[] }
 ): number {
   let score = 0;
 
-  // Title matching (highest weight)
-  const titleScore = calculateStringSimilarity(item.name, target.title);
-  score += titleScore * 60; // 60% weight for title
+  // Name matching (highest weight)
+  let nameScore = calculateStringSimilarity(item.name, target.name);
+
+  // Also check aliases for better matching
+  for (const alias of target.aliases) {
+    const aliasScore = calculateStringSimilarity(item.name, alias);
+    if (aliasScore > nameScore) {
+      nameScore = aliasScore;
+    }
+  }
+  score += nameScore * 50; // 50% weight for name/alias
 
   // Description matching
   if (item.description && target.description) {
@@ -120,10 +142,19 @@ function calculateMatchScore(
   // Category matching
   if (item.category && target.category) {
     const catScore = calculateStringSimilarity(item.category, target.category);
-    score += catScore * 20; // 20% weight for category
+    score += catScore * 15; // 15% weight for category
   }
 
-  return Math.round(score);
+  // Alias boost: if item name matches any alias exactly, boost score
+  const normalizedName = normalizeString(item.name);
+  for (const alias of target.aliases) {
+    if (normalizeString(alias) === normalizedName) {
+      score += 15; // 15% bonus for exact alias match
+      break;
+    }
+  }
+
+  return Math.round(Math.min(100, score));
 }
 
 /**
@@ -182,19 +213,30 @@ function normalizeString(str: string): string {
 }
 
 /**
- * Get which fields contributed to the match.
+ * Get which fields contributed to the match (with aliases support).
  */
-function getMatchedFields(
+function getMatchedFieldsWithAliases(
   item: ParsedItem,
-  title: string,
-  description: string | null,
-  category: string | null
+  name: string,
+  description: string,
+  category: string,
+  aliases: string[]
 ): string[] {
   const fields: string[] = [];
 
-  if (calculateStringSimilarity(item.name, title) > 0.3) {
-    fields.push('title');
+  // Check name match
+  if (calculateStringSimilarity(item.name, name) > 0.3) {
+    fields.push('name');
   }
+
+  // Check alias matches
+  for (const alias of aliases) {
+    if (calculateStringSimilarity(item.name, alias) > 0.3) {
+      fields.push('alias');
+      break;
+    }
+  }
+
   if (item.description && description && calculateStringSimilarity(item.description, description) > 0.3) {
     fields.push('description');
   }

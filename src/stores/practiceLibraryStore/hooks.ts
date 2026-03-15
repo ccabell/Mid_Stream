@@ -10,6 +10,12 @@ import * as selectors from './selectors';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
 import { isGlobalLibrary } from 'apiServices/practiceLibrary/types';
 import type { LibraryTab } from './types';
+import {
+  getUnifiedProducts,
+  getUnifiedServices,
+  convertToPLProduct,
+  convertToPLService,
+} from 'data/globalLibraryUnified';
 
 /**
  * Hook for accessing store actions
@@ -132,22 +138,58 @@ export const useProducts = () => {
 
       setIsLoadingProducts(true);
       try {
-        const filterParams = {
-          search: filters.search || undefined,
-          is_active: filters.is_active ?? undefined,
-          is_preferred: filters.is_preferred ?? undefined,
-          category: filters.category ?? undefined,
-        };
+        if (isGlobalLibrary(practiceId)) {
+          // Load from static unified global library (353+ products from Supabase)
+          let items = getUnifiedProducts().map((item) => convertToPLProduct(item, null));
 
-        // Use global API for global library, practice API otherwise
-        const data = isGlobalLibrary(practiceId)
-          ? await practiceLibraryApi.getGLProducts(filterParams, signal)
-          : await practiceLibraryApi.getPLProducts(
-              { ...filterParams, practice_id: practiceId },
-              signal
+          // Apply search filter locally
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            items = items.filter(
+              (item) =>
+                item.title.toLowerCase().includes(searchLower) ||
+                item.description?.toLowerCase().includes(searchLower) ||
+                item.category?.toLowerCase().includes(searchLower)
             );
+          }
 
-        setProducts(data);
+          // Apply active filter
+          if (filters.is_active !== null) {
+            items = items.filter((item) => item.is_active === filters.is_active);
+          }
+
+          setProducts({
+            items,
+            total: items.length,
+            page: 1,
+            size: items.length,
+            pages: 1,
+          });
+        } else {
+          // Load from localStorage for practice-specific items
+          const storageKey = `practiceLibrary_${practiceId}_products`;
+          const stored = localStorage.getItem(storageKey);
+          let items = stored ? JSON.parse(stored) : [];
+
+          // Apply filters
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            items = items.filter(
+              (item: { title: string; description?: string; category?: string }) =>
+                item.title.toLowerCase().includes(searchLower) ||
+                item.description?.toLowerCase().includes(searchLower) ||
+                item.category?.toLowerCase().includes(searchLower)
+            );
+          }
+
+          setProducts({
+            items,
+            total: items.length,
+            page: 1,
+            size: items.length,
+            pages: 1,
+          });
+        }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Failed to load products:', error);

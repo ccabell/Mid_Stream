@@ -26,8 +26,12 @@ import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practi
 import { FileUploadZone } from './FileUploadZone';
 import { MatchReviewList } from './MatchReviewList';
 import { parseFile, readFileAsText } from 'utils/fileParser';
-import { findMatches } from 'utils/stringMatcher';
-import { globalServices, globalProducts } from 'data/globalLibrary';
+import { findMatchesUnified } from 'utils/stringMatcher';
+import {
+  getUnifiedProducts,
+  getUnifiedServices,
+  UNIFIED_COUNTS,
+} from 'data/globalLibraryUnified';
 
 const STEPS = [
   { label: 'Upload File', icon: CloudUploadIcon },
@@ -99,8 +103,11 @@ export function ImportFromGlobalModal() {
 
       actions.setParsedItems(parseResult.items);
 
-      // Find matches against global library
-      const matches = findMatches(parseResult.items, globalServices, globalProducts);
+      // Find matches against unified global library (353+ products from Supabase + manual)
+      console.log(`Matching against ${UNIFIED_COUNTS.totalProducts} products and ${UNIFIED_COUNTS.totalServices} services`);
+      const unifiedProducts = getUnifiedProducts();
+      const unifiedServices = getUnifiedServices();
+      const matches = findMatchesUnified(parseResult.items, unifiedServices, unifiedProducts);
       actions.setMatchResults(matches);
 
       // Move to review step

@@ -10,6 +10,8 @@ import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
 import Alert from '@mui/material/Alert';
 import Grid from '@mui/material/Grid';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -17,6 +19,7 @@ import FactCheckIcon from '@mui/icons-material/FactCheck';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BusinessIcon from '@mui/icons-material/Business';
+import SmartToyIcon from '@mui/icons-material/SmartToy';
 import { runsApi, agentsApi, practicesApi } from 'apiServices';
 import type { Run, Agent, DownstreamResult, Practice } from 'apiServices';
 import { ROUTES, runHitlPath, tcpPath } from 'constants/routes';
@@ -36,6 +39,7 @@ export function RunDetailPage() {
   const [runningAgent, setRunningAgent] = useState<string | null>(null);
   const [agentError, setAgentError] = useState<string | null>(null);
   const [hideEmptyCards, setHideEmptyCards] = useState(false);
+  const [activeTab, setActiveTab] = useState('extraction');
 
   useEffect(() => {
     if (!runId) return;
@@ -68,6 +72,8 @@ export function RunDetailPage() {
       await agentsApi.runDownstream(runId, agentId);
       const updatedRun = await runsApi.getById(runId);
       setRun(updatedRun);
+      // Switch to the new agent output tab
+      setActiveTab(agentId);
     } catch (e) {
       setAgentError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -80,6 +86,18 @@ export function RunDetailPage() {
     () => runOutputToCards(run?.outputs, { hideEmptyCards }),
     [run?.outputs, hideEmptyCards]
   );
+
+  // Get downstream agent outputs
+  const downstreamOutputs = useMemo(() => {
+    if (!run?.outputs?.downstream) return [];
+    return Object.entries(run.outputs.downstream as Record<string, DownstreamResult>).map(
+      ([agentId, result]) => ({
+        agentId,
+        agentName: agents.find((a) => a.id === agentId)?.name ?? agentId,
+        result,
+      })
+    );
+  }, [run?.outputs?.downstream, agents]);
 
   if (loading) {
     return (
@@ -160,18 +178,6 @@ export function RunDetailPage() {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          {hasCards && (
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={hideEmptyCards}
-                  onChange={(e) => setHideEmptyCards(e.target.checked)}
-                  size="small"
-                />
-              }
-              label={<Typography variant="body2">Hide empty</Typography>}
-            />
-          )}
           {version === 'v2' && (
             <Button
               variant={hasHITL ? 'outlined' : 'contained'}
@@ -195,58 +201,61 @@ export function RunDetailPage() {
         </Box>
       </Box>
 
-      <Grid container spacing={3}>
-        {/* Main content - Cards */}
-        <Grid size={{ xs: 12, lg: 8 }}>
-          {hasCards ? (
-            <Box>
-              {cards.map((card) => (
-                <CardRenderer key={card.id} card={card} />
-              ))}
-            </Box>
-          ) : run.outputs ? (
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: 'grey.50',
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                Raw Output (V1 or Unknown Format)
-              </Typography>
-              <Box
-                component="pre"
-                sx={{
-                  p: 2,
-                  backgroundColor: 'grey.100',
-                  borderRadius: 1,
-                  overflow: 'auto',
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  maxHeight: 500,
-                }}
-              >
-                {JSON.stringify(run.outputs, null, 2)}
-              </Box>
-            </Box>
-          ) : (
-            <Alert severity="info">No extraction outputs available</Alert>
-          )}
+      {/* Output Tabs - Above all content */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs
+          value={activeTab}
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontWeight: 500,
+              minHeight: 48,
+            },
+          }}
+        >
+          <Tab label="Extraction" value="extraction" />
+          {downstreamOutputs.map((output) => (
+            <Tab
+              key={output.agentId}
+              label={output.agentName}
+              value={output.agentId}
+              icon={<SmartToyIcon sx={{ fontSize: 16 }} />}
+              iconPosition="start"
+            />
+          ))}
+        </Tabs>
+      </Box>
 
-          {/* Agent outputs */}
-          {run.outputs?.downstream && Object.keys(run.outputs.downstream).length > 0 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5, color: 'text.secondary' }}>
-                Agent Outputs
-              </Typography>
-              {Object.entries(run.outputs.downstream as Record<string, DownstreamResult>).map(([agentId, result]) => (
+      <Grid container spacing={3}>
+        {/* Main content area */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          {/* Extraction Tab Content */}
+          {activeTab === 'extraction' && (
+            <Box>
+              {hasCards && (
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={hideEmptyCards}
+                        onChange={(e) => setHideEmptyCards(e.target.checked)}
+                        size="small"
+                      />
+                    }
+                    label={<Typography variant="body2">Hide empty</Typography>}
+                  />
+                </Box>
+              )}
+              {hasCards ? (
+                <Box>
+                  {cards.map((card) => (
+                    <CardRenderer key={card.id} card={card} />
+                  ))}
+                </Box>
+              ) : run.outputs ? (
                 <Box
-                  key={agentId}
                   sx={{
-                    mb: 2,
                     p: 2,
                     borderRadius: 2,
                     backgroundColor: 'grey.50',
@@ -255,26 +264,73 @@ export function RunDetailPage() {
                   }}
                 >
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-                    {agents.find((a) => a.id === agentId)?.name ?? agentId}
+                    Raw Output (V1 or Unknown Format)
                   </Typography>
                   <Box
                     component="pre"
                     sx={{
-                      p: 1.5,
+                      p: 2,
                       backgroundColor: 'grey.100',
                       borderRadius: 1,
                       overflow: 'auto',
                       fontSize: 11,
                       fontFamily: 'monospace',
-                      maxHeight: 300,
+                      maxHeight: 500,
+                    }}
+                  >
+                    {JSON.stringify(run.outputs, null, 2)}
+                  </Box>
+                </Box>
+              ) : (
+                <Alert severity="info">No extraction outputs available</Alert>
+              )}
+            </Box>
+          )}
+
+          {/* Agent Output Tab Content */}
+          {downstreamOutputs.map((output) =>
+            activeTab === output.agentId ? (
+              <Box key={output.agentId}>
+                <Box
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    backgroundColor: 'grey.50',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <SmartToyIcon sx={{ color: 'primary.main' }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {output.agentName}
+                    </Typography>
+                    <Chip
+                      label={new Date(output.result.ran_at).toLocaleString()}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      backgroundColor: 'grey.100',
+                      borderRadius: 1,
+                      overflow: 'auto',
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      maxHeight: 600,
                       whiteSpace: 'pre-wrap',
                     }}
                   >
-                    {typeof result.result === 'string' ? result.result : JSON.stringify(result.result, null, 2)}
+                    {typeof output.result.result === 'string'
+                      ? output.result.result
+                      : JSON.stringify(output.result.result, null, 2)}
                   </Box>
                 </Box>
-              ))}
-            </Box>
+              </Box>
+            ) : null
           )}
         </Grid>
 

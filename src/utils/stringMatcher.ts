@@ -3,14 +3,19 @@
  *
  * Matches parsed items against Global Library services and products
  * using string similarity algorithms.
+ *
+ * Supports both:
+ * - Legacy: globalLibrary.ts (manual entries)
+ * - Unified: globalLibraryUnified.ts (Supabase + manual)
  */
 
 import type { ParsedItem } from './fileParser';
 import type { GlobalService, GlobalProduct } from 'data/globalLibrary';
+import type { UnifiedGlobalItem } from 'data/globalLibraryUnified';
 
 export interface MatchCandidate {
   type: 'service' | 'product';
-  item: GlobalService | GlobalProduct;
+  item: GlobalService | GlobalProduct | UnifiedGlobalItem;
   score: number; // 0-100
   matchedOn: string[]; // Fields that contributed to match
 }
@@ -287,4 +292,175 @@ export function getConfidenceLabel(confidence: 'high' | 'medium' | 'low' | 'none
     case 'none':
       return 'No Match';
   }
+}
+
+// =============================================================================
+// UNIFIED MATCHING (for globalLibraryUnified.ts)
+// =============================================================================
+
+/**
+ * Find matches for all parsed items against unified global library.
+ * This version works with UnifiedGlobalItem which may not have aliases.
+ */
+export function findMatchesUnified(
+  parsedItems: ParsedItem[],
+  unifiedServices: UnifiedGlobalItem[],
+  unifiedProducts: UnifiedGlobalItem[]
+): MatchResult[] {
+  return parsedItems.map((item) => findMatchesForUnifiedItem(item, unifiedServices, unifiedProducts));
+}
+
+/**
+ * Find matches for a single parsed item against unified items.
+ */
+function findMatchesForUnifiedItem(
+  item: ParsedItem,
+  unifiedServices: UnifiedGlobalItem[],
+  unifiedProducts: UnifiedGlobalItem[]
+): MatchResult {
+  const candidates: MatchCandidate[] = [];
+
+  // Match against services
+  for (const service of unifiedServices) {
+    const score = calculateUnifiedMatchScore(item, service);
+    if (score > 0) {
+      candidates.push({
+        type: 'service',
+        item: service,
+        score,
+        matchedOn: getUnifiedMatchedFields(item, service),
+      });
+    }
+  }
+
+  // Match against products
+  for (const product of unifiedProducts) {
+    const score = calculateUnifiedMatchScore(item, product);
+    if (score > 0) {
+      candidates.push({
+        type: 'product',
+        item: product,
+        score,
+        matchedOn: getUnifiedMatchedFields(item, product),
+      });
+    }
+  }
+
+  // Sort by score descending
+  candidates.sort((a, b) => b.score - a.score);
+
+  // Take top 5 matches
+  const topMatches = candidates.slice(0, 5);
+  const bestMatch = topMatches[0] ?? null;
+
+  return {
+    sourceItem: item,
+    matches: topMatches,
+    bestMatch,
+    confidence: getConfidenceLevel(bestMatch?.score ?? 0),
+  };
+}
+
+/**
+ * Calculate match score for unified items.
+ * Handles items that may not have aliases (Supabase data).
+ * Also matches on manufacturer and brand name.
+ */
+function calculateUnifiedMatchScore(item: ParsedItem, target: UnifiedGlobalItem): number {
+  let score = 0;
+
+  // Name matching (highest weight - 50%)
+  let nameScore = calculateStringSimilarity(item.name, target.name);
+
+  // Also check aliases for better matching (if available)
+  if (target.aliases && target.aliases.length > 0) {
+    for (const alias of target.aliases) {
+      const aliasScore = calculateStringSimilarity(item.name, alias);
+      if (aliasScore > nameScore) {
+        nameScore = aliasScore;
+      }
+    }
+  }
+  score += nameScore * 50;
+
+  // Manufacturer matching (15% weight) - important for Supabase data
+  if (target.manufacturer) {
+    const mfgScore = calculateStringSimilarity(item.name, target.manufacturer);
+    score += mfgScore * 15;
+  }
+
+  // Brand name matching (10% weight)
+  if (target.brandName) {
+    const brandScore = calculateStringSimilarity(item.name, target.brandName);
+    score += brandScore * 10;
+  }
+
+  // Description matching (15% weight)
+  if (item.description && target.description) {
+    const descScore = calculateStringSimilarity(item.description, target.description);
+    score += descScore * 15;
+  }
+
+  // Category matching (10% weight)
+  if (item.category && target.category) {
+    const catScore = calculateStringSimilarity(item.category, target.category);
+    score += catScore * 10;
+  }
+
+  // Exact alias match bonus
+  if (target.aliases && target.aliases.length > 0) {
+    const normalizedName = normalizeString(item.name);
+    for (const alias of target.aliases) {
+      if (normalizeString(alias) === normalizedName) {
+        score += 10; // 10% bonus for exact alias match
+        break;
+      }
+    }
+  }
+
+  return Math.round(Math.min(100, score));
+}
+
+/**
+ * Get which fields contributed to the match for unified items.
+ */
+function getUnifiedMatchedFields(item: ParsedItem, target: UnifiedGlobalItem): string[] {
+  const fields: string[] = [];
+
+  // Check name match
+  if (calculateStringSimilarity(item.name, target.name) > 0.3) {
+    fields.push('name');
+  }
+
+  // Check manufacturer match
+  if (target.manufacturer && calculateStringSimilarity(item.name, target.manufacturer) > 0.3) {
+    fields.push('manufacturer');
+  }
+
+  // Check brand match
+  if (target.brandName && calculateStringSimilarity(item.name, target.brandName) > 0.3) {
+    fields.push('brand');
+  }
+
+  // Check alias matches
+  if (target.aliases && target.aliases.length > 0) {
+    for (const alias of target.aliases) {
+      if (calculateStringSimilarity(item.name, alias) > 0.3) {
+        fields.push('alias');
+        break;
+      }
+    }
+  }
+
+  // Check description match
+  if (item.description && target.description && calculateStringSimilarity(item.description, target.description) > 0.3) {
+    fields.push('description');
+  }
+
+  // Check category match
+  if (item.category && target.category && calculateStringSimilarity(item.category, target.category) > 0.3) {
+    fields.push('category');
+  }
+
+  return fields;
 }

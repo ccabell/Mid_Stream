@@ -64,18 +64,30 @@ export function HITLPage({
   // Fall back to client-side extraction when API fails or runId is not available
   useEffect(() => {
     const initialize = async () => {
+      console.log('[HITL Page] Initializing...', { runId, hasExtraction: !!extractionOutput, practiceId });
+
       if (runId && extractionOutput) {
         try {
           // Try API-based analysis first
+          console.log('[HITL Page] Trying API-based analysis...');
           await actions.initFromApi(runId, practiceId);
+          console.log('[HITL Page] API-based analysis succeeded');
         } catch (error) {
           // If API fails, fall back to client-side transformation
-          console.warn('HITL API unavailable, using client-side extraction:', error);
-          actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
+          console.warn('[HITL Page] API failed, using client-side extraction:', error);
+          try {
+            actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
+            console.log('[HITL Page] Client-side extraction succeeded');
+          } catch (fallbackError) {
+            console.error('[HITL Page] Client-side extraction also failed:', fallbackError);
+          }
         }
       } else if (extractionOutput) {
         // No runId - use client-side transformation directly
+        console.log('[HITL Page] No runId, using client-side extraction directly');
         actions.initFromExtraction(extractionOutput, practiceId || 'default', runId);
+      } else {
+        console.error('[HITL Page] No extractionOutput provided!');
       }
     };
 

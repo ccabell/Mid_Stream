@@ -272,11 +272,16 @@ export function useHITLState() {
     practiceId: string,
     runId?: string
   ) => {
+    console.log('[HITL] initFromExtraction called', { runId, practiceId });
+    console.log('[HITL] extraction data:', JSON.stringify(extraction, null, 2).slice(0, 500));
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     contextRef.current = { runId, practiceId };
 
     try {
+      console.log('[HITL] Transforming extraction to draft...');
       const draft = transformExtractionToHITLDraft(extraction);
+      console.log('[HITL] Draft created successfully');
 
       // Initialize with version info for client-side fallback
       const versionInfo: VersionInfo = {
@@ -303,6 +308,8 @@ export function useHITLState() {
         conflictState: null,
       });
     } catch (error) {
+      console.error('[HITL] initFromExtraction failed:', error);
+      console.error('[HITL] Error stack:', error instanceof Error ? error.stack : 'no stack');
       setState(prev => ({
         ...prev,
         loading: false,

@@ -95,8 +95,11 @@ export function HITLVerificationPage() {
     );
   }
 
-  // Check if run has extraction output
-  const hasExtraction = run.outputs?.prompt_1 && run.outputs?.prompt_2;
+  // Check if run has extraction output with parsed_json
+  const p1 = run.outputs?.prompt_1;
+  const p2 = run.outputs?.prompt_2;
+  const hasExtraction = p1?.parsed_json && p2?.parsed_json;
+
   if (!hasExtraction) {
     return (
       <Box sx={{ p: 3 }}>
@@ -105,20 +108,20 @@ export function HITLVerificationPage() {
         </Button>
         <Alert severity="warning">
           <AlertTitle>Missing Extraction Data</AlertTitle>
-          This run does not have complete extraction output (prompt_1 and prompt_2).
+          This run does not have complete extraction output (prompt_1 and prompt_2 with parsed_json).
           HITL verification requires extraction to be complete.
+          <br /><br />
+          <strong>Debug:</strong> prompt_1={p1 ? 'exists' : 'missing'},
+          prompt_1.parsed_json={p1?.parsed_json ? 'exists' : 'missing'},
+          prompt_2={p2 ? 'exists' : 'missing'},
+          prompt_2.parsed_json={p2?.parsed_json ? 'exists' : 'missing'}
         </Alert>
       </Box>
     );
   }
 
   // Build extraction output from run data
-  // Safe to access since we checked hasExtraction above
-  const p1 = run.outputs!.prompt_1!;
-  const p2 = run.outputs!.prompt_2!;
-
-  // Cast V2 types to Pass1Output/Pass2Output - they have compatible runtime structure
-  // but different TypeScript definitions (V2 has optional fields, Pass types are strict)
+  // The normalizer will handle V2 → standard format conversion
   const extractionOutput: ExtractionOutput = {
     prompt_1: {
       parsed_json: p1.parsed_json as Pass1Output,

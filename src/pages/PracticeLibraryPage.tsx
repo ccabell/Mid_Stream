@@ -131,7 +131,7 @@ function SearchAndActions() {
           startIcon={<UploadIcon />}
           onClick={() => actions.openImportModal()}
         >
-          Import from Global
+          Import Practice Library
         </Button>
       )}
       <Button

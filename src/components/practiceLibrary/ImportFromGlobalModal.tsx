@@ -170,7 +170,7 @@ export function ImportFromGlobalModal() {
     <Dialog open={isOpen} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="h6">Import from File</Typography>
+          <Typography variant="h6">Import Practice Library</Typography>
           <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
@@ -193,8 +193,8 @@ export function ImportFromGlobalModal() {
           {importStep === 0 && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload a JSON or CSV file containing your products and services.
-                We'll help you match them to items in the Global Library.
+                Upload your practice's product and service list (JSON or CSV).
+                We'll match them against our Global Library so you can select standardized items.
               </Typography>
 
               <FileUploadZone
@@ -216,8 +216,8 @@ export function ImportFromGlobalModal() {
           {importStep === 1 && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Review the suggested matches below. You can change the match,
-                create a new item, or skip items you don't want to import.
+                We've matched your items against the Global Library. Review the suggestions,
+                select the correct match from our catalog, or skip items you don't need.
               </Typography>
 
               {isMatching ? (

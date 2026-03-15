@@ -104,7 +104,7 @@ function MatchReviewItem({ result, selected, onUpdate }: MatchReviewItemProps) {
         {/* Source Item */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="caption" color="text.secondary">
-            From File
+            Your Item
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 500 }}>
             {result.sourceItem.name}
@@ -140,7 +140,7 @@ function MatchReviewItem({ result, selected, onUpdate }: MatchReviewItemProps) {
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
             <Typography variant="caption" color="text.secondary">
-              Match To
+              Global Library Match
             </Typography>
             <Chip
               label={getConfidenceLabel(result.confidence)}

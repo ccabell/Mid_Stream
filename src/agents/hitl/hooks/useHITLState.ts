@@ -47,92 +47,100 @@ const INITIAL_STATE: HITLState = {
 
 /**
  * Transform API response draft to local draft format
+ * Includes defensive handling for missing/malformed data
  */
 function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
+  // Safe access helpers
+  const patientVoice = apiDraft?.patient_voice || {};
+  const treatmentPlan = apiDraft?.treatment_plan_today || [];
+  const recommendations = apiDraft?.additional_recommendations || [];
+  const ohcItems = apiDraft?.objections_hesitations_concerns || [];
+  const checklistCategories = apiDraft?.visit_checklist || [];
+
   return {
     patientSummary: {
       primaryConcern: {
-        value: apiDraft.patient_voice.primary_concern,
-        original: apiDraft.patient_voice.primary_concern,
+        value: patientVoice.primary_concern || '',
+        original: patientVoice.primary_concern || '',
         verified: false,
         edited: false,
       },
-      secondaryConcerns: apiDraft.patient_voice.secondary_concerns.map(c => ({
+      secondaryConcerns: (patientVoice.secondary_concerns || []).map(c => ({
         value: c,
         original: c,
         verified: false,
         edited: false,
       })),
-      goals: apiDraft.patient_voice.goals.map(g => ({
+      goals: (patientVoice.goals || []).map(g => ({
         value: g,
         original: g,
         verified: false,
         edited: false,
       })),
-      anticipatedOutcomes: apiDraft.patient_voice.expectations,
+      anticipatedOutcomes: patientVoice.expectations || [],
       timeline: {
         event: null,
         timeframe: null,
         urgency: 'medium' as const,
       },
     },
-    treatments: apiDraft.treatment_plan_today.map(t => ({
+    treatments: treatmentPlan.map(t => ({
       id: uuidv4(),
-      name: t.name,
-      area: t.area,
-      details: t.details,
+      name: t.name || '',
+      area: t.area || '',
+      details: t.details || '',
       cost: t.price_display || '',
       status: 'performed' as const,
-      included: t.include,
+      included: t.include ?? true,
       source: 'extraction' as const,
     })),
-    recommendations: apiDraft.additional_recommendations.map(r => ({
+    recommendations: recommendations.map(r => ({
       id: uuidv4(),
-      name: r.name,
-      type: r.type as 'service' | 'product' | 'package',
-      rationale: r.rationale,
-      priorityScore: r.priority_score,
-      tier: r.priority_score >= 80 ? 1 : r.priority_score >= 60 ? 2 : r.priority_score >= 40 ? 3 : 4,
+      name: r.name || '',
+      type: (r.type as 'service' | 'product' | 'package') || 'service',
+      rationale: r.rationale || '',
+      priorityScore: r.priority_score || 50,
+      tier: (r.priority_score || 50) >= 80 ? 1 : (r.priority_score || 50) >= 60 ? 2 : (r.priority_score || 50) >= 40 ? 3 : 4,
       patientReception: null,
-      action: r.action,
+      action: r.action || null,
       scores: {
-        patientBenefit: Math.round(r.priority_score * 0.4),
-        clinicalViability: Math.round(r.priority_score * 0.35),
-        practiceValue: Math.round(r.priority_score * 0.25),
+        patientBenefit: Math.round((r.priority_score || 50) * 0.4),
+        clinicalViability: Math.round((r.priority_score || 50) * 0.35),
+        practiceValue: Math.round((r.priority_score || 50) * 0.25),
       },
       talkingPoints: [],
       synergies: [],
     })),
     needsAttention: {
-      objections: apiDraft.objections_hesitations_concerns
+      objections: ohcItems
         .filter(i => i.type === 'objection')
         .map(o => ({
           id: uuidv4(),
           type: 'other' as const,
-          statement: o.statement,
+          statement: o.statement || '',
           resolved: o.status === 'resolved',
           resolution_approach: null,
-          status: o.status,
+          status: o.status || 'unresolved',
           suggestedResponse: o.suggested_response || null,
           suggestedResponseLoading: false,
           notes: '',
         })),
-      hesitations: apiDraft.objections_hesitations_concerns
+      hesitations: ohcItems
         .filter(i => i.type === 'hesitation')
         .map(h => ({
           id: uuidv4(),
           topic: 'Hesitation',
-          statement: h.statement,
+          statement: h.statement || '',
           resolved: h.status === 'resolved',
           resolution_approach: null,
-          status: h.status,
+          status: h.status || 'unresolved',
           notes: '',
         })),
-      concerns: apiDraft.objections_hesitations_concerns
+      concerns: ohcItems
         .filter(i => i.type === 'concern')
         .map(c => ({
           id: uuidv4(),
-          concern: c.statement,
+          concern: c.statement || '',
           raised_by: 'patient' as const,
           category: 'other' as const,
           addressed: c.status === 'resolved',
@@ -142,13 +150,13 @@ function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
         })),
     },
     checklist: {
-      items: apiDraft.visit_checklist.flatMap(category =>
-        category.items.map(item => ({
-          itemId: item.item_id,
-          itemLabel: item.item_label,
-          category: category.category as 'safety' | 'clinical' | 'education' | 'closing',
-          completed: item.completed,
-          critical: item.critical,
+      items: checklistCategories.flatMap(category =>
+        (category.items || []).map(item => ({
+          itemId: item.item_id || uuidv4(),
+          itemLabel: item.item_label || '',
+          category: (category.category as 'safety' | 'clinical' | 'education' | 'closing') || 'clinical',
+          completed: item.completed ?? null,
+          critical: item.critical ?? false,
           evidence: null,
           manuallyChecked: false,
         }))

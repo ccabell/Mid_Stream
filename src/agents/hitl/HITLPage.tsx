@@ -184,9 +184,21 @@ export function HITLPage({
     );
   }
 
-  const pass2 = extractionOutput?.prompt_2.parsed_json;
-  const commitmentLevel = pass2?.patient_signals?.commitment_level;
-  const outcomeStatus = pass2?.outcome?.status;
+  // Safely extract display values - handle both V2 (FieldWithEvidence) and legacy formats
+  const pass2 = extractionOutput?.prompt_2?.parsed_json as Record<string, unknown> | undefined;
+  const patientSignals = pass2?.patient_signals as Record<string, unknown> | undefined;
+  const outcome = pass2?.outcome as Record<string, unknown> | undefined;
+
+  // V2 format wraps values in { value: ... }, legacy format has direct values
+  const rawCommitment = patientSignals?.commitment_level;
+  const commitmentLevel = typeof rawCommitment === 'object' && rawCommitment !== null && 'value' in rawCommitment
+    ? (rawCommitment as { value: string }).value
+    : rawCommitment as string | undefined;
+
+  const rawStatus = outcome?.status;
+  const outcomeStatus = typeof rawStatus === 'object' && rawStatus !== null && 'value' in rawStatus
+    ? (rawStatus as { value: string }).value
+    : rawStatus as string | undefined;
 
   return (
     <Box sx={{ p: embedded ? 0 : 3 }}>

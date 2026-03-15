@@ -30,3 +30,5 @@ export type { OfferingCardProps, OfferingListProps } from './OfferingCard';
 
 export { EvidenceQuote, EvidenceList } from './EvidenceQuote';
 export type { EvidenceQuoteProps, EvidenceListProps } from './EvidenceQuote';
+
+export { CardRenderer } from './CardRenderer';

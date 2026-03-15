@@ -56,6 +56,7 @@ import {
   useSelectedPrompt,
 } from 'stores/promptStore';
 import type { Prompt, PromptCategory, PromptStatus } from 'stores/promptStore/types';
+import { promptsApi } from 'apiServices/prompts.api';
 
 // ============================================================================
 // CONSTANTS
@@ -126,6 +127,9 @@ export function PromptManagerPage() {
     severity: 'success',
   });
 
+  // Loading state for fetching prompt content
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+
   // Load from backend on mount
   useEffect(() => {
     actions.loadFromBackend().catch(() => {
@@ -137,19 +141,53 @@ export function PromptManagerPage() {
   // HANDLERS
   // ===========================================================================
 
-  const handleViewPrompt = (prompt: Prompt) => {
+  const handleViewPrompt = async (prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setViewDialogOpen(true);
+
+    // If content is empty and we have a backend ID, fetch full content
+    if (!prompt.content && prompt.backendId) {
+      setIsLoadingContent(true);
+      try {
+        const fullTemplate = await promptsApi.getTemplate(prompt.backendId);
+        // Update local state with fetched content
+        setSelectedPrompt({ ...prompt, content: fullTemplate.content });
+        // Also update the store
+        actions.updatePrompt(prompt.id, { content: fullTemplate.content });
+      } catch (err) {
+        console.error('Failed to fetch prompt content:', err);
+      } finally {
+        setIsLoadingContent(false);
+      }
+    }
   };
 
-  const handleEditPrompt = (prompt: Prompt) => {
+  const handleEditPrompt = async (prompt: Prompt) => {
     setSelectedPrompt(prompt);
     setFormName(prompt.name);
     setFormDescription(prompt.description);
     setFormCategory(prompt.category);
-    setFormContent(prompt.content);
     setFormAgentId(prompt.agentId || '');
     setEditDialogOpen(true);
+
+    // If content is empty and we have a backend ID, fetch full content
+    if (!prompt.content && prompt.backendId) {
+      setIsLoadingContent(true);
+      setFormContent('Loading...');
+      try {
+        const fullTemplate = await promptsApi.getTemplate(prompt.backendId);
+        setFormContent(fullTemplate.content);
+        // Update the store for future access
+        actions.updatePrompt(prompt.id, { content: fullTemplate.content });
+      } catch (err) {
+        console.error('Failed to fetch prompt content:', err);
+        setFormContent('Failed to load prompt content');
+      } finally {
+        setIsLoadingContent(false);
+      }
+    } else {
+      setFormContent(prompt.content);
+    }
   };
 
   const handleSaveEdit = () => {
@@ -617,25 +655,34 @@ export function PromptManagerPage() {
           {selectedPrompt?.name}
           <Typography variant="body2" color="text.secondary">
             {categoryLabels[selectedPrompt?.category || 'custom']} • v{selectedPrompt?.version}
+            {selectedPrompt?.backendId && (
+              <Chip label="Backend" size="small" color="success" sx={{ ml: 1 }} />
+            )}
           </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <Box
-            component="pre"
-            sx={{
-              p: 2,
-              bgcolor: 'grey.100',
-              borderRadius: 1,
-              overflow: 'auto',
-              maxHeight: '60vh',
-              fontFamily: 'monospace',
-              fontSize: '0.85rem',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          >
-            {selectedPrompt?.content || 'No content'}
-          </Box>
+          {isLoadingContent ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box
+              component="pre"
+              sx={{
+                p: 2,
+                bgcolor: 'grey.100',
+                borderRadius: 1,
+                overflow: 'auto',
+                maxHeight: '60vh',
+                fontFamily: 'monospace',
+                fontSize: '0.85rem',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {selectedPrompt?.content || 'No content available'}
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
@@ -693,27 +740,41 @@ export function PromptManagerPage() {
               multiline
               rows={2}
             />
-            <TextField
-              label="Prompt Content"
-              value={formContent}
-              onChange={(e) => setFormContent(e.target.value)}
-              fullWidth
-              multiline
-              minRows={15}
-              maxRows={30}
-              sx={{
-                '& .MuiInputBase-input': {
-                  fontFamily: 'monospace',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.5,
-                },
-              }}
-            />
+            {isLoadingContent ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
+                  Loading prompt content...
+                </Typography>
+              </Box>
+            ) : (
+              <TextField
+                label="Prompt Content"
+                value={formContent}
+                onChange={(e) => setFormContent(e.target.value)}
+                fullWidth
+                multiline
+                minRows={15}
+                maxRows={30}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5,
+                  },
+                }}
+              />
+            )}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => { setEditDialogOpen(false); resetForm(); }}>Cancel</Button>
-          <Button onClick={handleSaveEdit} variant="contained" startIcon={<SaveIcon />}>
+          <Button
+            onClick={handleSaveEdit}
+            variant="contained"
+            startIcon={<SaveIcon />}
+            disabled={isLoadingContent}
+          >
             Save Changes
           </Button>
         </DialogActions>

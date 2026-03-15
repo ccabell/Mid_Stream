@@ -31,7 +31,11 @@ import {
   getUnifiedProducts,
   getUnifiedServices,
   UNIFIED_COUNTS,
+  convertToPLProduct,
+  convertToPLService,
+  type UnifiedGlobalItem,
 } from 'data/globalLibraryUnified';
+import type { PLProduct, PLService } from 'apiServices/practiceLibrary/types';
 
 const STEPS = [
   { label: 'Upload File', icon: CloudUploadIcon },
@@ -48,6 +52,7 @@ export function ImportFromGlobalModal() {
   const selectedMatches = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedMatches);
   const isMatching = usePracticeLibraryStore(practiceLibrarySelectors.selectIsMatching);
   const selectedPractice = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPractice);
+  const activeTab = usePracticeLibraryStore(practiceLibrarySelectors.selectActiveTab);
   const actions = usePracticeLibraryStore(practiceLibrarySelectors.selectActions);
 
 
@@ -138,16 +143,103 @@ export function ImportFromGlobalModal() {
   }, [importStep, actions]);
 
   const handleImport = useCallback(async () => {
-    // TODO: Actually create the items in the practice library
-    // For now, just close the modal
+    if (!selectedPractice) return;
+
     console.log('Importing items:', selectedMatches);
     console.log('Practice:', selectedPractice);
 
-    // Would call API here to create items
+    // Determine if importing products or services based on active tab
+    const itemType = activeTab === 'services' ? 'services' : 'products';
+    const storageKey = `practiceLibrary_${selectedPractice.id}_${itemType}`;
 
+    // Get existing items from localStorage
+    const existingData = localStorage.getItem(storageKey);
+    const existingItems: (PLProduct | PLService)[] = existingData ? JSON.parse(existingData) : [];
+
+    // Convert matched items to practice library format
+    const newItems: (PLProduct | PLService)[] = [];
+
+    for (const selectedMatch of selectedMatches) {
+      if (selectedMatch.match !== null) {
+        // Import from global library match
+        const matchedItem = selectedMatch.match.item as UnifiedGlobalItem;
+
+        if (itemType === 'products') {
+          const plProduct = convertToPLProduct(matchedItem, selectedPractice.id);
+          // Check for duplicates by title
+          if (!existingItems.some((item) => item.title === plProduct.title)) {
+            newItems.push(plProduct);
+          }
+        } else {
+          const plService = convertToPLService(matchedItem, selectedPractice.id);
+          if (!existingItems.some((item) => item.title === plService.title)) {
+            newItems.push(plService);
+          }
+        }
+      } else if (selectedMatch.createNew) {
+        // Create new item from parsed data
+        const parsedItem = parsedItems[selectedMatch.sourceIndex];
+        if (parsedItem) {
+          const newItem: PLProduct | PLService = {
+            id: `new-${Date.now()}-${selectedMatch.sourceIndex}`,
+            practice_id: selectedPractice.id,
+            title: parsedItem.name,
+            description: parsedItem.description ?? null,
+            category: parsedItem.category ?? null,
+            price: parsedItem.price ?? null,
+            is_active: true,
+            is_preferred: false,
+            concerns_addressed: [],
+            suggest_when: [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            // Service-specific fields
+            ...(itemType === 'services' && {
+              subcategory: null,
+              price_tier: null,
+              downtime: null,
+              synergies: [],
+              rationale_template: null,
+            }),
+          } as PLProduct | PLService;
+
+          // Check for duplicates
+          if (!existingItems.some((item) => item.title === newItem.title)) {
+            newItems.push(newItem);
+          }
+        }
+      }
+    }
+
+    // Save combined items to localStorage
+    const allItems = [...existingItems, ...newItems];
+    localStorage.setItem(storageKey, JSON.stringify(allItems));
+
+    console.log(`Imported ${newItems.length} new ${itemType} to practice ${selectedPractice.name}`);
+
+    // Close modal and reset import state
     actions.closeImportModal();
-    // TODO: Show success toast
-  }, [selectedMatches, selectedPractice, actions]);
+    actions.resetImportState();
+
+    // Refresh the list by triggering a re-render (the hooks will reload from localStorage)
+    if (itemType === 'products') {
+      actions.setProducts({
+        items: allItems as PLProduct[],
+        total: allItems.length,
+        page: 1,
+        size: allItems.length,
+        pages: 1,
+      });
+    } else {
+      actions.setServices({
+        items: allItems as PLService[],
+        total: allItems.length,
+        page: 1,
+        size: allItems.length,
+        pages: 1,
+      });
+    }
+  }, [selectedMatches, selectedPractice, parsedItems, activeTab, actions]);
 
   if (!isOpen) return null;
 

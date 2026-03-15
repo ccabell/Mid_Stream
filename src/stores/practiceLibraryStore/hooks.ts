@@ -92,22 +92,58 @@ export const useServices = () => {
 
       setIsLoadingServices(true);
       try {
-        const filterParams = {
-          search: filters.search || undefined,
-          is_active: filters.is_active ?? undefined,
-          is_preferred: filters.is_preferred ?? undefined,
-          category: filters.category ?? undefined,
-        };
+        if (isGlobalLibrary(practiceId)) {
+          // Load from static unified global library (48+ services from manual library)
+          let items = getUnifiedServices().map((item) => convertToPLService(item, null));
 
-        // Use global API for global library, practice API otherwise
-        const data = isGlobalLibrary(practiceId)
-          ? await practiceLibraryApi.getGLServices(filterParams, signal)
-          : await practiceLibraryApi.getPLServices(
-              { ...filterParams, practice_id: practiceId },
-              signal
+          // Apply search filter locally
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            items = items.filter(
+              (item) =>
+                item.title.toLowerCase().includes(searchLower) ||
+                item.description?.toLowerCase().includes(searchLower) ||
+                item.category?.toLowerCase().includes(searchLower)
             );
+          }
 
-        setServices(data);
+          // Apply active filter
+          if (filters.is_active !== null) {
+            items = items.filter((item) => item.is_active === filters.is_active);
+          }
+
+          setServices({
+            items,
+            total: items.length,
+            page: 1,
+            size: items.length,
+            pages: 1,
+          });
+        } else {
+          // Load from localStorage for practice-specific items
+          const storageKey = `practiceLibrary_${practiceId}_services`;
+          const stored = localStorage.getItem(storageKey);
+          let items = stored ? JSON.parse(stored) : [];
+
+          // Apply filters
+          if (filters.search) {
+            const searchLower = filters.search.toLowerCase();
+            items = items.filter(
+              (item: { title: string; description?: string; category?: string }) =>
+                item.title.toLowerCase().includes(searchLower) ||
+                item.description?.toLowerCase().includes(searchLower) ||
+                item.category?.toLowerCase().includes(searchLower)
+            );
+          }
+
+          setServices({
+            items,
+            total: items.length,
+            page: 1,
+            size: items.length,
+            pages: 1,
+          });
+        }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Failed to load services:', error);

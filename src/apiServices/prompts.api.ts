@@ -32,6 +32,10 @@ export interface PromptSet {
 
 export interface PromptTemplateDetail extends PromptTemplate {
   content: string;
+  prompt_text?: string;  // Backend returns this field name
+  system_prompt?: string;
+  input_contract?: unknown;
+  output_schema?: unknown;
 }
 
 export interface CreatePromptTemplatePayload {
@@ -65,11 +69,15 @@ export const promptsApi = {
       .get<{ data: PromptTemplate[]; total: number }>('/prompt_templates')
       .then((r) => r.data),
 
-  /** Get a single prompt template by ID */
+  /** Get a single prompt template by ID (with full content) */
   getTemplate: (templateId: string) =>
     client
       .get<PromptTemplateDetail>(`/prompt_templates/${templateId}`)
-      .then((r) => r.data),
+      .then((r) => ({
+        ...r.data,
+        // Backend returns prompt_text, normalize to content
+        content: r.data.prompt_text || r.data.content || '',
+      })),
 
   /** Create a new prompt template */
   createTemplate: (payload: CreatePromptTemplatePayload) =>

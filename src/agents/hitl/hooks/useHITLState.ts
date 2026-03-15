@@ -46,38 +46,68 @@ const INITIAL_STATE: HITLState = {
 };
 
 /**
+ * Safely convert a value to an array, handling V2 wrapped format
+ */
+function toArray<T>(value: T[] | { value: T[] | null } | null | undefined): T[] {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object' && 'value' in value) {
+    return Array.isArray(value.value) ? value.value : [];
+  }
+  return [];
+}
+
+/**
+ * Safely extract a string value, handling V2 wrapped format
+ */
+function toString(value: string | { value: string | null } | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && 'value' in value) {
+    return typeof value.value === 'string' ? value.value : '';
+  }
+  return '';
+}
+
+/**
  * Transform API response draft to local draft format
  * Includes defensive handling for missing/malformed data
  */
 function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
-  // Safe access helpers
+  // Safe access helpers with V2 format support
   const patientVoice = apiDraft?.patient_voice || {};
-  const treatmentPlan = apiDraft?.treatment_plan_today || [];
-  const recommendations = apiDraft?.additional_recommendations || [];
-  const ohcItems = apiDraft?.objections_hesitations_concerns || [];
-  const checklistCategories = apiDraft?.visit_checklist || [];
+  const treatmentPlan = toArray(apiDraft?.treatment_plan_today);
+  const recommendations = toArray(apiDraft?.additional_recommendations);
+  const ohcItems = toArray(apiDraft?.objections_hesitations_concerns);
+  const checklistCategories = toArray(apiDraft?.visit_checklist);
+
+  // Extract values with V2 format support
+  const primaryConcern = toString(patientVoice.primary_concern);
+  const secondaryConcerns = toArray(patientVoice.secondary_concerns);
+  const goals = toArray(patientVoice.goals);
+  const expectations = toArray(patientVoice.expectations);
 
   return {
     patientSummary: {
       primaryConcern: {
-        value: patientVoice.primary_concern || '',
-        original: patientVoice.primary_concern || '',
+        value: primaryConcern,
+        original: primaryConcern,
         verified: false,
         edited: false,
       },
-      secondaryConcerns: (patientVoice.secondary_concerns || []).map(c => ({
-        value: c,
-        original: c,
+      secondaryConcerns: secondaryConcerns.map(c => ({
+        value: typeof c === 'string' ? c : String(c),
+        original: typeof c === 'string' ? c : String(c),
         verified: false,
         edited: false,
       })),
-      goals: (patientVoice.goals || []).map(g => ({
-        value: g,
-        original: g,
+      goals: goals.map(g => ({
+        value: typeof g === 'string' ? g : String(g),
+        original: typeof g === 'string' ? g : String(g),
         verified: false,
         edited: false,
       })),
-      anticipatedOutcomes: patientVoice.expectations || [],
+      anticipatedOutcomes: expectations.map(e => typeof e === 'string' ? e : String(e)),
       timeline: {
         event: null,
         timeframe: null,
@@ -151,7 +181,7 @@ function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
     },
     checklist: {
       items: checklistCategories.flatMap(category =>
-        (category.items || []).map(item => ({
+        toArray(category.items).map(item => ({
           itemId: item.item_id || uuidv4(),
           itemLabel: item.item_label || '',
           category: (category.category as 'safety' | 'clinical' | 'education' | 'closing') || 'clinical',

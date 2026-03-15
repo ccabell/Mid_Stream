@@ -5,7 +5,7 @@
  * them against the Global Library.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -111,7 +111,7 @@ export function ImportFromGlobalModal() {
     } finally {
       actions.setIsMatching(false);
     }
-  }, [importFile, globalServicesList, globalProductsList, actions]);
+  }, [importFile, actions]);
 
   const handleUpdateMatch = useCallback(
     (index: number, match: typeof selectedMatches[number]) => {

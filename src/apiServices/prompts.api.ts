@@ -77,6 +77,12 @@ export const promptsApi = {
       .post<PromptTemplate>('/prompt_templates', payload)
       .then((r) => r.data),
 
+  /** Update a prompt template */
+  updateTemplate: (templateId: string, payload: Partial<CreatePromptTemplatePayload>) =>
+    client
+      .patch<PromptTemplate>(`/prompt_templates/${templateId}`, payload)
+      .then((r) => r.data),
+
   /** Delete a prompt template */
   deleteTemplate: (templateId: string) =>
     client

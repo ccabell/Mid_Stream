@@ -26,6 +26,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import Snackbar from '@mui/material/Snackbar';
 
 // Icons
 import AddIcon from '@mui/icons-material/Add';
@@ -33,6 +35,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SaveIcon from '@mui/icons-material/Save';
 
 import { promptsApi, type PromptTemplate, type PromptSet } from 'apiServices/prompts.api';
 
@@ -43,11 +46,31 @@ export function PromptManagerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Dialog state
+  // View dialog state
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [templateContent, setTemplateContent] = useState<string>('');
   const [loadingContent, setLoadingContent] = useState(false);
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PromptTemplate | null>(null);
+  const [editContent, setEditContent] = useState<string>('');
+  const [editName, setEditName] = useState<string>('');
+  const [editDescription, setEditDescription] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState<PromptTemplate | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Snackbar
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success',
+  });
 
   // Load data
   const loadData = useCallback(async () => {
@@ -90,6 +113,87 @@ export function PromptManagerPage() {
     setViewDialogOpen(false);
     setSelectedTemplate(null);
     setTemplateContent('');
+  };
+
+  // Edit template
+  const handleEdit = async (template: PromptTemplate) => {
+    setEditingTemplate(template);
+    setEditName(template.name);
+    setEditDescription(template.description || '');
+    setEditDialogOpen(true);
+    setLoadingContent(true);
+    try {
+      const detail = await promptsApi.getTemplate(template.id);
+      setEditContent(detail.content || '');
+    } catch (e) {
+      setEditContent('');
+      setSnackbar({ open: true, message: 'Failed to load content', severity: 'error' });
+    } finally {
+      setLoadingContent(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTemplate) return;
+    setSaving(true);
+    try {
+      await promptsApi.updateTemplate(editingTemplate.id, {
+        name: editName,
+        description: editDescription,
+        content: editContent,
+      });
+      setSnackbar({ open: true, message: 'Prompt updated successfully', severity: 'success' });
+      setEditDialogOpen(false);
+      setEditingTemplate(null);
+      loadData(); // Refresh list
+    } catch (e) {
+      setSnackbar({
+        open: true,
+        message: `Failed to save: ${e instanceof Error ? e.message : 'Unknown error'}`,
+        severity: 'error'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingTemplate(null);
+    setEditContent('');
+    setEditName('');
+    setEditDescription('');
+  };
+
+  // Delete template
+  const handleDeleteClick = (template: PromptTemplate) => {
+    setDeletingTemplate(template);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingTemplate) return;
+    setDeleting(true);
+    try {
+      await promptsApi.deleteTemplate(deletingTemplate.id);
+      setSnackbar({ open: true, message: 'Prompt deleted successfully', severity: 'success' });
+      setDeleteDialogOpen(false);
+      setDeletingTemplate(null);
+      loadData(); // Refresh list
+    } catch (e) {
+      setSnackbar({
+        open: true,
+        message: `Failed to delete: ${e instanceof Error ? e.message : 'Unknown error'}`,
+        severity: 'error'
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDeletingTemplate(null);
   };
 
   // Group templates by prompt_id for display (unused for now, but available for future grouping)
@@ -268,19 +372,15 @@ export function PromptManagerPage() {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Edit (coming soon)">
-                        <span>
-                          <IconButton size="small" disabled>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </span>
+                      <Tooltip title="Edit">
+                        <IconButton size="small" onClick={() => handleEdit(template)}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                       </Tooltip>
-                      <Tooltip title="Delete (coming soon)">
-                        <span>
-                          <IconButton size="small" disabled>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </span>
+                      <Tooltip title="Delete">
+                        <IconButton size="small" onClick={() => handleDeleteClick(template)} color="error">
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
@@ -332,6 +432,125 @@ export function PromptManagerPage() {
           <Button onClick={handleCloseViewDialog}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={handleCloseEditDialog}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Edit Prompt Template
+          {editingTemplate && (
+            <Typography variant="body2" color="text.secondary">
+              {editingTemplate.prompt_id} - {editingTemplate.version}
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingContent ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                label="Name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                fullWidth
+                size="small"
+              />
+              <TextField
+                label="Description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+              />
+              <TextField
+                label="Prompt Content"
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                fullWidth
+                multiline
+                minRows={15}
+                maxRows={30}
+                sx={{
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'monospace',
+                    fontSize: '0.85rem',
+                    lineHeight: 1.5,
+                  },
+                }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveEdit}
+            variant="contained"
+            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+            disabled={saving || loadingContent}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Prompt Template?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Are you sure you want to delete <strong>{deletingTemplate?.name}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+            disabled={deleting}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

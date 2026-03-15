@@ -147,9 +147,10 @@ export const usePromptStore = create<PromptStore>()(
           updatePrompt: (id, updates) => {
             set((state) => {
               const index = state.prompts.findIndex((p) => p.id === id);
-              if (index !== -1) {
+              const existing = state.prompts[index];
+              if (index !== -1 && existing) {
                 state.prompts[index] = {
-                  ...state.prompts[index],
+                  ...existing,
                   ...updates,
                   updatedAt: new Date().toISOString(),
                   syncedToBackend: false,
@@ -219,9 +220,10 @@ export const usePromptStore = create<PromptStore>()(
           updatePromptSet: (id, updates) => {
             set((state) => {
               const index = state.promptSets.findIndex((s) => s.id === id);
-              if (index !== -1) {
+              const existing = state.promptSets[index];
+              if (index !== -1 && existing) {
                 state.promptSets[index] = {
-                  ...state.promptSets[index],
+                  ...existing,
                   ...updates,
                   updatedAt: new Date().toISOString(),
                   syncedToBackend: false,
@@ -255,8 +257,9 @@ export const usePromptStore = create<PromptStore>()(
           updateAgent: (id, updates) => {
             set((state) => {
               const index = state.agents.findIndex((a) => a.id === id);
-              if (index !== -1) {
-                state.agents[index] = { ...state.agents[index], ...updates };
+              const existing = state.agents[index];
+              if (index !== -1 && existing) {
+                state.agents[index] = { ...existing, ...updates };
               }
             });
           },
@@ -265,16 +268,18 @@ export const usePromptStore = create<PromptStore>()(
             set((state) => {
               // Update prompt
               const promptIndex = state.prompts.findIndex((p) => p.id === promptId);
-              if (promptIndex !== -1) {
+              const prompt = state.prompts[promptIndex];
+              if (promptIndex !== -1 && prompt) {
                 const agent = state.agents.find((a) => a.id === agentId);
-                state.prompts[promptIndex].agentId = agentId;
-                state.prompts[promptIndex].agentName = agent?.name;
+                prompt.agentId = agentId;
+                prompt.agentName = agent?.name;
               }
 
               // Update agent
               const agentIndex = state.agents.findIndex((a) => a.id === agentId);
-              if (agentIndex !== -1 && !state.agents[agentIndex].promptIds.includes(promptId)) {
-                state.agents[agentIndex].promptIds.push(promptId);
+              const agent = state.agents[agentIndex];
+              if (agentIndex !== -1 && agent && !agent.promptIds.includes(promptId)) {
+                agent.promptIds.push(promptId);
               }
             });
           },
@@ -282,18 +287,18 @@ export const usePromptStore = create<PromptStore>()(
           unlinkPromptFromAgent: (promptId) => {
             set((state) => {
               const promptIndex = state.prompts.findIndex((p) => p.id === promptId);
-              if (promptIndex !== -1) {
-                const oldAgentId = state.prompts[promptIndex].agentId;
-                state.prompts[promptIndex].agentId = undefined;
-                state.prompts[promptIndex].agentName = undefined;
+              const prompt = state.prompts[promptIndex];
+              if (promptIndex !== -1 && prompt) {
+                const oldAgentId = prompt.agentId;
+                prompt.agentId = undefined;
+                prompt.agentName = undefined;
 
                 // Remove from agent
                 if (oldAgentId) {
                   const agentIndex = state.agents.findIndex((a) => a.id === oldAgentId);
-                  if (agentIndex !== -1) {
-                    state.agents[agentIndex].promptIds = state.agents[agentIndex].promptIds.filter(
-                      (pid) => pid !== promptId
-                    );
+                  const agent = state.agents[agentIndex];
+                  if (agentIndex !== -1 && agent) {
+                    agent.promptIds = agent.promptIds.filter((pid) => pid !== promptId);
                   }
                 }
               }
@@ -375,12 +380,13 @@ export const usePromptStore = create<PromptStore>()(
 
             set((state) => {
               const index = state.prompts.findIndex((p) => p.id === state.selectedPromptId);
-              if (index !== -1) {
-                state.prompts[index].content = state.editedContent!;
-                state.prompts[index].version = newVersion.version;
-                state.prompts[index].versions.push(newVersion);
-                state.prompts[index].updatedAt = new Date().toISOString();
-                state.prompts[index].syncedToBackend = false;
+              const prompt = state.prompts[index];
+              if (index !== -1 && prompt && state.editedContent) {
+                prompt.content = state.editedContent;
+                prompt.version = newVersion.version;
+                prompt.versions.push(newVersion);
+                prompt.updatedAt = new Date().toISOString();
+                prompt.syncedToBackend = false;
               }
               state.hasUnsavedChanges = false;
             });
@@ -402,9 +408,9 @@ export const usePromptStore = create<PromptStore>()(
           createVersion: (promptId, changelog) => {
             set((state) => {
               const index = state.prompts.findIndex((p) => p.id === promptId);
-              if (index === -1) return;
-
               const prompt = state.prompts[index];
+              if (index === -1 || !prompt) return;
+
               const newVersion = {
                 version: incrementVersion(prompt.version),
                 content: prompt.content,
@@ -413,23 +419,24 @@ export const usePromptStore = create<PromptStore>()(
                 changelog,
               };
 
-              state.prompts[index].version = newVersion.version;
-              state.prompts[index].versions.push(newVersion);
+              prompt.version = newVersion.version;
+              prompt.versions.push(newVersion);
             });
           },
 
           revertToVersion: (promptId, version) => {
             set((state) => {
               const index = state.prompts.findIndex((p) => p.id === promptId);
-              if (index === -1) return;
+              const prompt = state.prompts[index];
+              if (index === -1 || !prompt) return;
 
-              const targetVersion = state.prompts[index].versions.find((v) => v.version === version);
+              const targetVersion = prompt.versions.find((v) => v.version === version);
               if (!targetVersion) return;
 
-              state.prompts[index].content = targetVersion.content;
-              state.prompts[index].systemPrompt = targetVersion.systemPrompt;
-              state.prompts[index].version = version;
-              state.prompts[index].updatedAt = new Date().toISOString();
+              prompt.content = targetVersion.content;
+              prompt.systemPrompt = targetVersion.systemPrompt;
+              prompt.version = version;
+              prompt.updatedAt = new Date().toISOString();
 
               if (state.selectedPromptId === promptId) {
                 state.editedContent = targetVersion.content;
@@ -466,9 +473,10 @@ export const usePromptStore = create<PromptStore>()(
                     });
                     set((state) => {
                       const index = state.prompts.findIndex((p) => p.id === prompt.id);
-                      if (index !== -1) {
-                        state.prompts[index].backendId = created.id;
-                        state.prompts[index].syncedToBackend = true;
+                      const foundPrompt = state.prompts[index];
+                      if (index !== -1 && foundPrompt) {
+                        foundPrompt.backendId = created.id;
+                        foundPrompt.syncedToBackend = true;
                       }
                     });
                   }

@@ -36,15 +36,21 @@ export function TCPWrapperPage() {
       return;
     }
 
-    Promise.all([runsApi.getById(runId), practicesApi.list()])
-      .then(([runData, practicesData]) => {
+    runsApi.getById(runId)
+      .then((runData) => {
         setRun(runData);
-        // Find practice name for this run
-        if (runData.practice_id) {
-          const practice = practicesData.find((p: Practice) => p.id === runData.practice_id);
-          setPracticeName(practice?.name ?? null);
-        }
         setLoading(false);
+        // Fetch practice name separately - don't fail if this errors
+        if (runData.practice_id) {
+          practicesApi.list()
+            .then((practicesData) => {
+              const practice = practicesData.find((p: Practice) => p.id === runData.practice_id);
+              setPracticeName(practice?.name ?? null);
+            })
+            .catch(() => {
+              // Silently ignore - will show "Not assigned"
+            });
+        }
       })
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Failed to load run');

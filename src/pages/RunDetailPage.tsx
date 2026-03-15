@@ -39,17 +39,21 @@ export function RunDetailPage() {
 
   useEffect(() => {
     if (!runId) return;
-    Promise.all([
-      runsApi.getById(runId),
-      agentsApi.list(),
-      practicesApi.list(),
-    ])
-      .then(([runData, agentsData, practicesData]) => {
+    // Fetch run and agents (required), practices separately (optional for display)
+    Promise.all([runsApi.getById(runId), agentsApi.list()])
+      .then(([runData, agentsData]) => {
         setRun(runData);
         setAgents(agentsData);
+        // Fetch practices separately - don't fail page if this errors
         if (runData.practice_id) {
-          const practice = practicesData.find((p: Practice) => p.id === runData.practice_id);
-          setPracticeName(practice?.name ?? null);
+          practicesApi.list()
+            .then((practicesData) => {
+              const practice = practicesData.find((p: Practice) => p.id === runData.practice_id);
+              setPracticeName(practice?.name ?? null);
+            })
+            .catch(() => {
+              // Silently ignore - will just show "No practice assigned"
+            });
         }
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))

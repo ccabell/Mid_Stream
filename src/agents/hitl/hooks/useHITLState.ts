@@ -48,7 +48,7 @@ const INITIAL_STATE: HITLState = {
 /**
  * Safely convert a value to an array, handling V2 wrapped format
  */
-function toArray<T>(value: T[] | { value: T[] | null } | null | undefined): T[] {
+function safeArray<T>(value: T[] | { value: T[] | null } | null | undefined): T[] {
   if (value === null || value === undefined) return [];
   if (Array.isArray(value)) return value;
   if (typeof value === 'object' && 'value' in value) {
@@ -60,7 +60,7 @@ function toArray<T>(value: T[] | { value: T[] | null } | null | undefined): T[] 
 /**
  * Safely extract a string value, handling V2 wrapped format
  */
-function toString(value: string | { value: string | null } | null | undefined): string {
+function safeString(value: string | { value: string | null } | null | undefined): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'string') return value;
   if (typeof value === 'object' && 'value' in value) {
@@ -76,16 +76,16 @@ function toString(value: string | { value: string | null } | null | undefined): 
 function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
   // Safe access helpers with V2 format support
   const patientVoice = apiDraft?.patient_voice || {};
-  const treatmentPlan = toArray(apiDraft?.treatment_plan_today);
-  const recommendations = toArray(apiDraft?.additional_recommendations);
-  const ohcItems = toArray(apiDraft?.objections_hesitations_concerns);
-  const checklistCategories = toArray(apiDraft?.visit_checklist);
+  const treatmentPlan = safeArray(apiDraft?.treatment_plan_today);
+  const recommendations = safeArray(apiDraft?.additional_recommendations);
+  const ohcItems = safeArray(apiDraft?.objections_hesitations_concerns);
+  const checklistCategories = safeArray(apiDraft?.visit_checklist);
 
   // Extract values with V2 format support
-  const primaryConcern = toString(patientVoice.primary_concern);
-  const secondaryConcerns = toArray(patientVoice.secondary_concerns);
-  const goals = toArray(patientVoice.goals);
-  const expectations = toArray(patientVoice.expectations);
+  const primaryConcern = safeString(patientVoice.primary_concern);
+  const secondaryConcerns = safeArray(patientVoice.secondary_concerns);
+  const goals = safeArray(patientVoice.goals);
+  const expectations = safeArray(patientVoice.expectations);
 
   return {
     patientSummary: {
@@ -181,7 +181,7 @@ function transformApiDraftToLocal(apiDraft: HITLVerificationDraft): HITLDraft {
     },
     checklist: {
       items: checklistCategories.flatMap(category =>
-        toArray(category.items).map(item => ({
+        safeArray(category.items).map(item => ({
           itemId: item.item_id || uuidv4(),
           itemLabel: item.item_label || '',
           category: (category.category as 'safety' | 'clinical' | 'education' | 'closing') || 'clinical',

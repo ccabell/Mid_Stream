@@ -42,13 +42,23 @@ function getIntentColor(score: number) {
   return { main: '#dc2626', light: '#fee2e2' };
 }
 
+// Safely extract array from V2 format or direct array
+function safeOfferingsArray(val: unknown): Array<{ value?: number }> {
+  if (Array.isArray(val)) return val;
+  if (val && typeof val === 'object' && 'value' in val) {
+    const wrapped = val as { value: unknown };
+    return Array.isArray(wrapped.value) ? wrapped.value : [];
+  }
+  return [];
+}
+
 function RunCard({ run, practiceName, onClick }: { run: Run; practiceName: string | null; onClick: () => void }) {
   const statusConfig = getStatusConfig(run.status);
 
-  // Extract key metrics from outputs
+  // Extract key metrics from outputs - handle both V2 wrapped and direct formats
   const p1 = run.outputs?.prompt_1?.parsed_json as V2Pass1Output | undefined;
   const p2 = run.outputs?.prompt_2?.parsed_json as V2Pass2Output | undefined;
-  const offerings = p1?.offerings || [];
+  const offerings = safeOfferingsArray(p1?.offerings);
   const intentScore = p2?.patient_signals?.intent_level?.value ?? p2?.patient_signals?.intent_score?.value;
   const summary = p2?.outcome?.summary?.value;
   const hasHITL = !!run.prompt_hitl;

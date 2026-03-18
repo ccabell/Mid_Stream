@@ -49,13 +49,18 @@ import LinkOffIcon from '@mui/icons-material/LinkOff';
 import SearchIcon from '@mui/icons-material/Search';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 import {
   usePromptStore,
   useFilteredPrompts,
   useSelectedPrompt,
 } from 'stores/promptStore';
-import type { Prompt, PromptCategory, PromptStatus } from 'stores/promptStore/types';
+import type { Prompt, PromptCategory, PromptStatus, PromptSet } from 'stores/promptStore/types';
 import { promptsApi } from 'apiServices/prompts.api';
 
 // ============================================================================
@@ -105,13 +110,25 @@ export function PromptManagerPage() {
   const searchQuery = usePromptStore((s) => s.searchQuery);
   const actions = usePromptStore((s) => s.actions);
 
-  // Dialog state
+  // Dialog state - Prompts
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+
+  // Dialog state - Prompt Sets
+  const [setDialogOpen, setSetDialogOpen] = useState(false);
+  const [setDialogMode, setSetDialogMode] = useState<'create' | 'edit'>('create');
+  const [deleteSetDialogOpen, setDeleteSetDialogOpen] = useState(false);
+  const [selectedSet, setSelectedSet] = useState<PromptSet | null>(null);
+
+  // Form state for prompt sets
+  const [promptSetName, setPromptSetName] = useState('');
+  const [promptSetDescription, setPromptSetDescription] = useState('');
+  const [promptSetOrder, setPromptSetOrder] = useState<string[]>([]);
+  const [promptSetVersions, setPromptSetVersions] = useState<Record<string, string>>({});
 
   // Form state for create/edit
   const [formName, setFormName] = useState('');
@@ -288,6 +305,114 @@ export function PromptManagerPage() {
     } catch {
       setSnackbar({ open: true, message: 'Sync failed', severity: 'error' });
     }
+  };
+
+  // ===========================================================================
+  // PROMPT SET HANDLERS
+  // ===========================================================================
+
+  const handleCreateSet = () => {
+    setSetDialogMode('create');
+    setPromptSetName('');
+    setPromptSetDescription('');
+    setPromptSetOrder([]);
+    setPromptSetVersions({});
+    setSelectedSet(null);
+    setSetDialogOpen(true);
+  };
+
+  const handleEditSet = (set: PromptSet) => {
+    setSetDialogMode('edit');
+    setSelectedSet(set);
+    setPromptSetName(set.name);
+    setPromptSetDescription(set.description);
+    setPromptSetOrder([...set.promptOrder]);
+    setPromptSetVersions({ ...set.promptVersions });
+    setSetDialogOpen(true);
+  };
+
+  const handleSaveSet = () => {
+    if (setDialogMode === 'create') {
+      actions.createPromptSet({
+        name: promptSetName,
+        description: promptSetDescription,
+        promptOrder: promptSetOrder,
+        promptVersions: promptSetVersions,
+        status: 'active',
+      });
+      setSnackbar({ open: true, message: 'Prompt set created', severity: 'success' });
+    } else if (selectedSet) {
+      actions.updatePromptSet(selectedSet.id, {
+        name: promptSetName,
+        description: promptSetDescription,
+        promptOrder: promptSetOrder,
+        promptVersions: promptSetVersions,
+      });
+      setSnackbar({ open: true, message: 'Prompt set updated', severity: 'success' });
+    }
+    setSetDialogOpen(false);
+    resetSetForm();
+  };
+
+  const handleDeleteSet = (set: PromptSet) => {
+    setSelectedSet(set);
+    setDeleteSetDialogOpen(true);
+  };
+
+  const handleConfirmDeleteSet = () => {
+    if (!selectedSet) return;
+    actions.deletePromptSet(selectedSet.id);
+    setSnackbar({ open: true, message: 'Prompt set deleted', severity: 'success' });
+    setDeleteSetDialogOpen(false);
+    setSelectedSet(null);
+  };
+
+  const handleAddPromptToSet = (promptId: string) => {
+    if (!promptSetOrder.includes(promptId)) {
+      setPromptSetOrder([...promptSetOrder, promptId]);
+    }
+  };
+
+  const handleRemovePromptFromSet = (promptId: string) => {
+    setPromptSetOrder(promptSetOrder.filter((id) => id !== promptId));
+    const newVersions = { ...promptSetVersions };
+    delete newVersions[promptId];
+    setPromptSetVersions(newVersions);
+  };
+
+  const handleMovePromptInSet = (index: number, direction: 'up' | 'down') => {
+    const newOrder = [...promptSetOrder];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newOrder.length) return;
+    [newOrder[index], newOrder[newIndex]] = [newOrder[newIndex]!, newOrder[index]!];
+    setPromptSetOrder(newOrder);
+  };
+
+  const handleSetPromptVersion = (promptId: string, version: string) => {
+    setPromptSetVersions({ ...promptSetVersions, [promptId]: version });
+  };
+
+  const resetSetForm = () => {
+    setPromptSetName('');
+    setPromptSetDescription('');
+    setPromptSetOrder([]);
+    setPromptSetVersions({});
+    setSelectedSet(null);
+  };
+
+  // Helper to get prompt by ID or promptOrder ID (like "prompt_1")
+  const getPromptForSet = (promptId: string): Prompt | undefined => {
+    // First try exact match
+    let prompt = prompts.find((p) => p.id === promptId);
+    if (prompt) return prompt;
+    // Try matching by backendId's prompt_id field (for backend sets)
+    prompt = prompts.find((p) => p.backendId === promptId);
+    if (prompt) return prompt;
+    // Try matching by category/name pattern
+    prompt = prompts.find((p) =>
+      p.name.toLowerCase().includes(promptId.replace('_', ' '))
+    );
+    return prompt;
   };
 
   const resetForm = () => {
@@ -522,10 +647,15 @@ export function PromptManagerPage() {
       {activeTab === 'sets' && (
         <Paper>
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6" fontWeight={600}>
-              Prompt Sets
-            </Typography>
-            <Button variant="contained" startIcon={<AddIcon />} size="small">
+            <Box>
+              <Typography variant="h6" fontWeight={600}>
+                Prompt Sets
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Combine prompts into ordered sequences for multi-pass extraction
+              </Typography>
+            </Box>
+            <Button variant="contained" startIcon={<AddIcon />} size="small" onClick={handleCreateSet}>
               Create Set
             </Button>
           </Box>
@@ -535,15 +665,17 @@ export function PromptManagerPage() {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Prompts</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>Agent</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {promptSets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                      <PlaylistAddIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                       <Typography variant="body2" color="text.secondary">
                         No prompt sets found. Create a set to group prompts for sequential execution.
                       </Typography>
@@ -553,21 +685,54 @@ export function PromptManagerPage() {
                   promptSets.map((set) => (
                     <TableRow key={set.id} hover>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={500}>{set.name}</Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                          {set.promptOrder.map((promptId) => (
-                            <Chip key={promptId} label={promptId} size="small" variant="outlined" />
-                          ))}
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>{set.name}</Typography>
+                          {set.backendId && (
+                            <Chip label="Backend" size="small" color="success" sx={{ mt: 0.5, height: 18, fontSize: '0.65rem' }} />
+                          )}
                         </Box>
                       </TableCell>
                       <TableCell>
-                        {set.agentName || <Typography variant="caption" color="text.secondary">Unlinked</Typography>}
+                        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 250 }}>
+                          {set.description || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                          {set.promptOrder.map((promptId, idx) => {
+                            const version = set.promptVersions[promptId];
+                            return (
+                              <Box key={promptId} sx={{ display: 'flex', alignItems: 'center' }}>
+                                {idx > 0 && <Typography variant="caption" color="text.secondary" sx={{ mx: 0.5 }}>→</Typography>}
+                                <Chip
+                                  label={`${promptId}${version ? ` (${version})` : ''}`}
+                                  size="small"
+                                  variant="outlined"
+                                  sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}
+                                />
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={set.status}
+                          size="small"
+                          color={set.status === 'active' ? 'success' : set.status === 'draft' ? 'warning' : 'default'}
+                        />
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton size="small"><EditIcon fontSize="small" /></IconButton>
-                        <IconButton size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                        <Tooltip title="Edit Set">
+                          <IconButton size="small" onClick={() => handleEditSet(set)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Set">
+                          <IconButton size="small" color="error" onClick={() => handleDeleteSet(set)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -906,6 +1071,226 @@ export function PromptManagerPage() {
           <Button onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveLink} variant="contained">
             {formAgentId ? 'Link' : 'Unlink'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Prompt Set Create/Edit Dialog */}
+      <Dialog open={setDialogOpen} onClose={() => setSetDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {setDialogMode === 'create' ? 'Create Prompt Set' : 'Edit Prompt Set'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Basic Info */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Set Name"
+                value={promptSetName}
+                onChange={(e) => setPromptSetName(e.target.value)}
+                fullWidth
+                size="small"
+                placeholder="e.g., 2-Step Patient Intelligence"
+              />
+            </Box>
+            <TextField
+              label="Description"
+              value={promptSetDescription}
+              onChange={(e) => setPromptSetDescription(e.target.value)}
+              fullWidth
+              size="small"
+              multiline
+              rows={2}
+              placeholder="Describe what this prompt set does..."
+            />
+
+            {/* Selected Prompts */}
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Prompts in Set ({promptSetOrder.length})
+              </Typography>
+              {promptSetOrder.length === 0 ? (
+                <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', bgcolor: 'grey.50' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No prompts added yet. Select prompts from below to add them.
+                  </Typography>
+                </Paper>
+              ) : (
+                <Paper variant="outlined">
+                  {promptSetOrder.map((promptId, index) => {
+                    const prompt = getPromptForSet(promptId);
+                    const version = promptSetVersions[promptId] || 'latest';
+                    return (
+                      <Box
+                        key={promptId}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          p: 1.5,
+                          borderBottom: index < promptSetOrder.length - 1 ? 1 : 0,
+                          borderColor: 'divider',
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary" sx={{ minWidth: 24, fontWeight: 600 }}>
+                          {index + 1}.
+                        </Typography>
+                        <DragIndicatorIcon sx={{ color: 'text.disabled', cursor: 'grab' }} />
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {prompt?.name || promptId}
+                          </Typography>
+                          {prompt?.description && (
+                            <Typography variant="caption" color="text.secondary">
+                              {prompt.description.slice(0, 60)}...
+                            </Typography>
+                          )}
+                        </Box>
+                        <FormControl size="small" sx={{ minWidth: 100 }}>
+                          <Select
+                            value={version}
+                            onChange={(e) => handleSetPromptVersion(promptId, e.target.value)}
+                            size="small"
+                            sx={{ fontSize: '0.8rem' }}
+                          >
+                            <MenuItem value="latest">Latest</MenuItem>
+                            <MenuItem value="v1">v1</MenuItem>
+                            <MenuItem value="v2">v2</MenuItem>
+                            <MenuItem value="v3">v3</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Tooltip title="Move Up">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleMovePromptInSet(index, 'up')}
+                              disabled={index === 0}
+                            >
+                              <ArrowUpwardIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Move Down">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleMovePromptInSet(index, 'down')}
+                              disabled={index === promptSetOrder.length - 1}
+                            >
+                              <ArrowDownwardIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Tooltip title="Remove">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemovePromptFromSet(promptId)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    );
+                  })}
+                </Paper>
+              )}
+            </Box>
+
+            {/* Available Prompts */}
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                Available Prompts
+              </Typography>
+              <Paper variant="outlined" sx={{ maxHeight: 250, overflow: 'auto' }}>
+                {prompts.length === 0 ? (
+                  <Box sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No prompts available. Create prompts first.
+                    </Typography>
+                  </Box>
+                ) : (
+                  prompts.map((prompt) => {
+                    const isAdded = promptSetOrder.includes(prompt.id) ||
+                      promptSetOrder.includes(prompt.backendId || '');
+                    return (
+                      <Box
+                        key={prompt.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          p: 1.5,
+                          borderBottom: 1,
+                          borderColor: 'divider',
+                          bgcolor: isAdded ? 'action.selected' : 'transparent',
+                          '&:last-child': { borderBottom: 0 },
+                        }}
+                      >
+                        <Box sx={{ flexGrow: 1 }}>
+                          <Typography variant="body2" fontWeight={500}>
+                            {prompt.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {categoryLabels[prompt.category]} • v{prompt.version}
+                          </Typography>
+                        </Box>
+                        {isAdded ? (
+                          <Chip
+                            icon={<CheckCircleIcon />}
+                            label="Added"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AddIcon />}
+                            onClick={() => handleAddPromptToSet(prompt.backendId || prompt.id)}
+                          >
+                            Add
+                          </Button>
+                        )}
+                      </Box>
+                    );
+                  })
+                )}
+              </Paper>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setSetDialogOpen(false); resetSetForm(); }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveSet}
+            variant="contained"
+            startIcon={<SaveIcon />}
+            disabled={!promptSetName || promptSetOrder.length === 0}
+          >
+            {setDialogMode === 'create' ? 'Create Set' : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Prompt Set Dialog */}
+      <Dialog open={deleteSetDialogOpen} onClose={() => setDeleteSetDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Delete Prompt Set?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Are you sure you want to delete <strong>{selectedSet?.name}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            This will not delete the individual prompts, only the set grouping.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteSetDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmDeleteSet} variant="contained" color="error">
+            Delete Set
           </Button>
         </DialogActions>
       </Dialog>

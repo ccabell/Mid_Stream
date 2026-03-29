@@ -3,6 +3,7 @@
  *
  * Dropdown to select which practice library to manage.
  * Includes Global Library option at the top for managing shared items.
+ * Loads practices from the live /practices API.
  */
 
 import { useState, useEffect } from 'react';
@@ -18,42 +19,57 @@ import PublicIcon from '@mui/icons-material/Public';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { usePracticeLibraryStore, practiceLibrarySelectors } from 'stores/practiceLibraryStore';
 import { GLOBAL_LIBRARY_PRACTICE, type Practice } from 'apiServices/practiceLibrary/types';
-
-// Mock practices for now - will be replaced with API call
-const MOCK_PRACTICES: Practice[] = [
-  { id: 'calospa', name: 'CaloSpa', is_active: true, config_level: 3 },
-  { id: 'little-mountain', name: 'Little Mountain Laser', is_active: true, config_level: 2 },
-  { id: 'midwest-vein', name: 'Midwest Vein and Laser', is_active: true, config_level: 1 },
-  { id: 'skincare-sharon', name: 'Skincare by Sharon', is_active: true, config_level: 0 },
-];
+import { practicesApi } from 'apiServices/practices.api';
 
 export function PracticeSelector() {
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const practices = usePracticeLibraryStore(practiceLibrarySelectors.selectPractices);
   const selectedPracticeId = usePracticeLibraryStore(practiceLibrarySelectors.selectSelectedPracticeId);
   const actions = usePracticeLibraryStore(practiceLibrarySelectors.selectActions);
 
   useEffect(() => {
-    // Load practices (mock for now)
+    let cancelled = false;
+
     const loadPractices = async () => {
       setIsLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      actions.setPractices(MOCK_PRACTICES);
+      setError(null);
+      try {
+        const data = await practicesApi.list();
+        if (cancelled) return;
 
-      // Auto-select first practice if none selected
-      if (!selectedPracticeId && MOCK_PRACTICES.length > 0) {
-        const firstPractice = MOCK_PRACTICES[0];
-        if (firstPractice) {
-          actions.setSelectedPractice(firstPractice);
+        // Map API practices to the Practice type expected by the store
+        const mapped: Practice[] = data.map((p) => ({
+          id: p.id,
+          name: p.name,
+          is_active: true,
+          config_level: 2 as const, // Default level
+        }));
+
+        actions.setPractices(mapped);
+
+        // Auto-select first practice if none selected
+        if (!selectedPracticeId && mapped.length > 0) {
+          const first = mapped[0];
+          if (first) {
+            actions.setSelectedPractice(first);
+          }
         }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load practices:', err);
+          setError('Failed to load practices');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     loadPractices();
-  }, [actions, selectedPracticeId]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const practiceId = event.target.value;
@@ -74,6 +90,14 @@ export function PracticeSelector() {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <CircularProgress size={20} />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'error.main', fontSize: 13 }}>
+        {error}
       </Box>
     );
   }
@@ -146,6 +170,13 @@ export function PracticeSelector() {
             )}
           </MenuItem>
         ))}
+        {practices.length === 0 && (
+          <MenuItem disabled>
+            <Box component="span" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+              No practices found
+            </Box>
+          </MenuItem>
+        )}
       </Select>
     </FormControl>
   );

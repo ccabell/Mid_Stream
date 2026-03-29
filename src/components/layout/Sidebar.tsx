@@ -21,6 +21,7 @@ import SyncIcon from '@mui/icons-material/CloudSync';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import PsychologyIcon from '@mui/icons-material/Psychology';
 import { ROUTES } from 'constants/routes';
 
 const DRAWER_WIDTH = 240;
@@ -41,6 +42,7 @@ const navItems = [
   { label: 'Practices', path: ROUTES.PRACTICES, icon: <BusinessIcon /> },
   { label: 'Library', path: ROUTES.PRACTICE_LIBRARY, icon: <LibraryBooksIcon /> },
   { label: 'Prompts', path: ROUTES.PROMPTS, icon: <DescriptionIcon /> },
+  { label: 'Coaching', path: ROUTES.COACHING, icon: <PsychologyIcon /> },
   { label: 'Integrations', path: ROUTES.INTEGRATIONS, icon: <SyncIcon /> },
 ];
 

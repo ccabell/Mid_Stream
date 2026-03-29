@@ -14,6 +14,7 @@ export const ROUTES = {
   TCP: '/tcp',
   TCP_FROM_RUN: '/tcp/:runId',
   INTEGRATIONS: '/integrations',
+  COACHING: '/coaching',
 } as const;
 
 export const runDetailPath = (runId: string) => `/runs/${runId}`;

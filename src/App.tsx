@@ -19,6 +19,7 @@ import {
   PromptManagerPage,
   TCPWrapperPage,
   IntegrationsPage,
+  CoachingPage,
 } from 'pages';
 
 export default function App() {
@@ -42,6 +43,7 @@ export default function App() {
             <Route path={ROUTES.TCP} element={<TCPWrapperPage />} />
             <Route path={ROUTES.TCP_FROM_RUN} element={<TCPWrapperPage />} />
             <Route path={ROUTES.INTEGRATIONS} element={<IntegrationsPage />} />
+            <Route path={ROUTES.COACHING} element={<CoachingPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

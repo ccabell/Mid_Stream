@@ -10,3 +10,4 @@ export { PracticeLibraryPage } from './PracticeLibraryPage';
 export { PromptManagerPage } from './PromptManager';
 export { TCPWrapperPage } from './TCPWrapperPage';
 export { IntegrationsPage } from './IntegrationsPage';
+export { CoachingPage } from './CoachingPage';

@@ -1,7 +1,9 @@
 /**
  * Practice Library Store Hooks
  *
- * Custom hooks for working with the practice library store
+ * Custom hooks for working with the practice library store.
+ * Round 21: pl_services and pl_products now query Supabase directly
+ * instead of using the localStorage stub.
  */
 
 import { useCallback, useEffect } from 'react';
@@ -9,6 +11,7 @@ import { usePracticeLibraryStore } from './store';
 import * as selectors from './selectors';
 import * as practiceLibraryApi from 'apiServices/practiceLibrary';
 import { isGlobalLibrary } from 'apiServices/practiceLibrary/types';
+import type { PLService, PLProduct } from 'apiServices/practiceLibrary/types';
 import type { LibraryTab } from './types';
 import {
   getUnifiedProducts,
@@ -16,6 +19,7 @@ import {
   convertToPLProduct,
   convertToPLService,
 } from 'data/globalLibraryUnified';
+import { supabase } from 'lib/supabaseClient';
 
 /**
  * Hook for accessing store actions
@@ -62,9 +66,8 @@ export const usePractices = () => {
   const loadPractices = useCallback(async () => {
     setIsLoadingPractices(true);
     try {
-      // This would call the practices API
-      // const data = await practicesApi.list();
-      // setPractices(data);
+      // Practices are loaded by PracticeSelector via practicesApi.list()
+      // This hook is a no-op stub kept for API compatibility
     } catch (error) {
       console.error('Failed to load practices:', error);
     } finally {
@@ -76,7 +79,10 @@ export const usePractices = () => {
 };
 
 /**
- * Hook to load services for selected practice or global library
+ * Hook to load services for selected practice or global library.
+ *
+ * Global Library → static unified data (globalLibraryUnified.ts)
+ * Practice Library → Supabase pl_services table (Round 21: replaces localStorage stub)
  */
 export const useServices = () => {
   const services = usePracticeLibraryStore(selectors.selectServices);
@@ -87,62 +93,72 @@ export const useServices = () => {
 
   const loadServices = useCallback(
     async (signal?: AbortSignal) => {
-      // Allow loading for both practices and global library
       if (!practiceId) return;
 
       setIsLoadingServices(true);
       try {
         if (isGlobalLibrary(practiceId)) {
-          // Load from static unified global library (48+ services from manual library)
+          // Global Library: load from static unified data
           let items = getUnifiedServices().map((item) => convertToPLService(item, null));
 
-          // Apply search filter locally
           if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
+            const q = filters.search.toLowerCase();
             items = items.filter(
               (item) =>
-                item.title.toLowerCase().includes(searchLower) ||
-                item.description?.toLowerCase().includes(searchLower) ||
-                item.category?.toLowerCase().includes(searchLower)
+                item.title.toLowerCase().includes(q) ||
+                item.description?.toLowerCase().includes(q) ||
+                item.category?.toLowerCase().includes(q)
             );
           }
-
-          // Apply active filter
           if (filters.is_active !== null) {
             items = items.filter((item) => item.is_active === filters.is_active);
           }
 
-          setServices({
-            items,
-            total: items.length,
-            page: 1,
-            size: items.length,
-            pages: 1,
-          });
+          setServices({ items, total: items.length, page: 1, size: items.length, pages: 1 });
         } else {
-          // Load from localStorage for practice-specific items
-          const storageKey = `practiceLibrary_${practiceId}_services`;
-          const stored = localStorage.getItem(storageKey);
-          let items = stored ? JSON.parse(stored) : [];
+          // Practice Library: query Supabase pl_services table
+          if (signal?.aborted) return;
 
-          // Apply filters
+          let query = supabase
+            .from('pl_services')
+            .select('*')
+            .eq('practice_id', practiceId)
+            .order('display_order', { ascending: true });
+
           if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            items = items.filter(
-              (item: { title: string; description?: string; category?: string }) =>
-                item.title.toLowerCase().includes(searchLower) ||
-                item.description?.toLowerCase().includes(searchLower) ||
-                item.category?.toLowerCase().includes(searchLower)
-            );
+            query = query.ilike('title', `%${filters.search}%`);
+          }
+          if (filters.is_active !== null) {
+            query = query.eq('is_active', filters.is_active);
           }
 
-          setServices({
-            items,
-            total: items.length,
-            page: 1,
-            size: items.length,
-            pages: 1,
-          });
+          const { data, error } = await query;
+
+          if (signal?.aborted) return;
+          if (error) throw error;
+
+          // Map Supabase rows to PLService shape
+          const items: PLService[] = (data ?? []).map((row) => ({
+            id: row.id,
+            practice_id: row.practice_id,
+            title: row.title,
+            description: row.description ?? null,
+            category: row.category ?? null,
+            subcategory: row.subcategory ?? null,
+            price: row.price ?? null,
+            price_tier: row.price_tier ?? null,
+            downtime: row.downtime ?? null,
+            is_active: row.is_active ?? true,
+            is_preferred: row.is_preferred ?? false,
+            concerns_addressed: row.concerns_addressed ?? [],
+            synergies: row.synergies ?? [],
+            suggest_when: row.suggest_when ?? [],
+            rationale_template: null,
+            created_at: row.created_at ?? '',
+            updated_at: row.updated_at ?? '',
+          }));
+
+          setServices({ items, total: items.length, page: 1, size: items.length, pages: 1 });
         }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -159,7 +175,10 @@ export const useServices = () => {
 };
 
 /**
- * Hook to load products for selected practice or global library
+ * Hook to load products for selected practice or global library.
+ *
+ * Global Library → static unified data (globalLibraryUnified.ts, 353+ products)
+ * Practice Library → Supabase pl_products table (Round 21: replaces localStorage stub)
  */
 export const useProducts = () => {
   const products = usePracticeLibraryStore(selectors.selectProducts);
@@ -175,56 +194,62 @@ export const useProducts = () => {
       setIsLoadingProducts(true);
       try {
         if (isGlobalLibrary(practiceId)) {
-          // Load from static unified global library (353+ products from Supabase)
+          // Global Library: load from static unified data (353+ products)
           let items = getUnifiedProducts().map((item) => convertToPLProduct(item, null));
 
-          // Apply search filter locally
           if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
+            const q = filters.search.toLowerCase();
             items = items.filter(
               (item) =>
-                item.title.toLowerCase().includes(searchLower) ||
-                item.description?.toLowerCase().includes(searchLower) ||
-                item.category?.toLowerCase().includes(searchLower)
+                item.title.toLowerCase().includes(q) ||
+                item.description?.toLowerCase().includes(q) ||
+                item.category?.toLowerCase().includes(q)
             );
           }
-
-          // Apply active filter
           if (filters.is_active !== null) {
             items = items.filter((item) => item.is_active === filters.is_active);
           }
 
-          setProducts({
-            items,
-            total: items.length,
-            page: 1,
-            size: items.length,
-            pages: 1,
-          });
+          setProducts({ items, total: items.length, page: 1, size: items.length, pages: 1 });
         } else {
-          // Load from localStorage for practice-specific items
-          const storageKey = `practiceLibrary_${practiceId}_products`;
-          const stored = localStorage.getItem(storageKey);
-          let items = stored ? JSON.parse(stored) : [];
+          // Practice Library: query Supabase pl_products table
+          if (signal?.aborted) return;
 
-          // Apply filters
+          let query = supabase
+            .from('pl_products')
+            .select('*')
+            .eq('practice_id', practiceId)
+            .order('display_order', { ascending: true });
+
           if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            items = items.filter(
-              (item: { title: string; description?: string; category?: string }) =>
-                item.title.toLowerCase().includes(searchLower) ||
-                item.description?.toLowerCase().includes(searchLower) ||
-                item.category?.toLowerCase().includes(searchLower)
-            );
+            query = query.ilike('title', `%${filters.search}%`);
+          }
+          if (filters.is_active !== null) {
+            query = query.eq('is_active', filters.is_active);
           }
 
-          setProducts({
-            items,
-            total: items.length,
-            page: 1,
-            size: items.length,
-            pages: 1,
-          });
+          const { data, error } = await query;
+
+          if (signal?.aborted) return;
+          if (error) throw error;
+
+          // Map Supabase rows to PLProduct shape
+          const items: PLProduct[] = (data ?? []).map((row) => ({
+            id: row.id,
+            practice_id: row.practice_id,
+            title: row.title,
+            description: row.description ?? null,
+            category: row.category ?? null,
+            price: row.price ?? null,
+            is_active: row.is_active ?? true,
+            is_preferred: row.is_preferred ?? false,
+            concerns_addressed: row.concerns_addressed ?? [],
+            suggest_when: row.suggest_when ?? [],
+            created_at: row.created_at ?? '',
+            updated_at: row.updated_at ?? '',
+          }));
+
+          setProducts({ items, total: items.length, page: 1, size: items.length, pages: 1 });
         }
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
@@ -255,10 +280,7 @@ export const usePackages = () => {
 
       setIsLoadingPackages(true);
       try {
-        // For global library, pass practice_id as undefined to get global packages
-        // For practice library, pass the actual practice_id
         const apiPracticeId = isGlobalLibrary(practiceId) ? undefined : practiceId;
-
         const data = await practiceLibraryApi.getPLPackages(
           { practice_id: apiPracticeId },
           signal
@@ -293,10 +315,7 @@ export const useConcerns = () => {
 
       setIsLoadingConcerns(true);
       try {
-        // For global library, pass practice_id as undefined to get global concerns
-        // For practice library, pass the actual practice_id
         const apiPracticeId = isGlobalLibrary(practiceId) ? undefined : practiceId;
-
         const data = await practiceLibraryApi.getPLConcerns(
           { practice_id: apiPracticeId },
           signal
@@ -323,7 +342,6 @@ export const useLoadActiveTabData = () => {
   const activeTab = usePracticeLibraryStore(selectors.selectActiveTab);
   const practiceId = usePracticeLibraryStore(selectors.selectSelectedPracticeId);
   const filters = usePracticeLibraryStore(selectors.selectFilters);
-
   const { loadServices } = useServices();
   const { loadProducts } = useProducts();
   const { loadPackages } = usePackages();
@@ -331,7 +349,6 @@ export const useLoadActiveTabData = () => {
 
   useEffect(() => {
     if (!practiceId) return;
-
     const controller = new AbortController();
 
     const loadData = async () => {
@@ -352,7 +369,6 @@ export const useLoadActiveTabData = () => {
     };
 
     loadData();
-
     return () => {
       controller.abort();
     };
@@ -366,7 +382,6 @@ export const useModals = () => {
   const isCreateModalOpen = usePracticeLibraryStore(selectors.selectIsCreateModalOpen);
   const isEditModalOpen = usePracticeLibraryStore(selectors.selectIsEditModalOpen);
   const isImportModalOpen = usePracticeLibraryStore(selectors.selectIsImportModalOpen);
-
   const {
     openCreateModal,
     closeCreateModal,
@@ -407,7 +422,6 @@ export const useSelectedItems = () => {
   const selectedProduct = usePracticeLibraryStore(selectors.selectSelectedProduct);
   const selectedPackage = usePracticeLibraryStore(selectors.selectSelectedPackage);
   const selectedConcern = usePracticeLibraryStore(selectors.selectSelectedConcern);
-
   const {
     setSelectedService,
     setSelectedProduct,
